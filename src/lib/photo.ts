@@ -1,20 +1,17 @@
 /**
  * Resolve a stored photoUrl into an actual <img src>.
- * Convention: if the value is empty, a full URL (http(s):// or data:), or starts with "/",
- * use it as-is. Otherwise treat it as a filename inside /public/photos/.
- *
- * Examples:
- *   "tamar.png"               -> "/photos/tamar.png"
- *   "/photos/tamar.png"       -> "/photos/tamar.png"
- *   "https://x/y.jpg"         -> "https://x/y.jpg"
- *   "data:image/png;base64,…" -> as-is
+ * Convention: if the value is a full URL (http(s):// or data:), use as-is.
+ * Otherwise treat it as a filename and look up /photos/<filename> under the app's base path
+ * (which is "/" in dev and "/team_plan_view/" on GitHub Pages).
  */
 export function resolvePhotoUrl(value: string | undefined | null): string {
   if (!value) return '';
   const v = value.trim();
   if (!v) return '';
-  if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('data:') || v.startsWith('/')) {
+  if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('data:')) {
     return v;
   }
-  return `/photos/${v}`;
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+  const clean = v.replace(/^\/+/, '').replace(/^photos\//, '');
+  return `${base}/photos/${clean}`;
 }
