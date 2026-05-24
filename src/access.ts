@@ -16,7 +16,7 @@
 
 // SHA-256 of "changeme" — replace with your own. Run: npm run gen-password "yourpass"
 export const PASSWORD_HASH =
-  '057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86';
+  'ff4ae065c5c2fac3fc1405a0bd7bb95b7b6f00be85141867d4fdc4bc70a76701';
 
 /** Bump this version to invalidate all unlocked sessions (e.g., after a password rotation). */
 export const ACCESS_VERSION = 1;
