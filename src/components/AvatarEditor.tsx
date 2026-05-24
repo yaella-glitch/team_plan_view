@@ -86,13 +86,16 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-40 mt-2 w-80 rounded-xl border border-border bg-white p-3 shadow-xl">
+        <div
+          className="absolute left-0 top-full z-40 mt-2 w-80 rounded-xl border border-white/15 p-3 shadow-xl"
+          style={{ background: 'rgb(var(--surface))' }}
+        >
           <label className="block text-xs font-semibold text-ink">Photo for {person.name}</label>
 
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="mt-2 w-full rounded-lg border-2 border-dashed border-indigo-200 bg-indigo-50/50 px-3 py-3 text-sm font-medium text-indigo-700 hover:border-indigo-400 hover:bg-indigo-50"
+            className="mt-2 w-full rounded-lg border-2 border-dashed border-accent/40 bg-accent/10 px-3 py-3 text-sm font-medium text-accent hover:border-accent hover:bg-accent/20"
           >
             ↑ Pick file from your computer
           </button>
@@ -115,7 +118,7 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
 
           <label className="block text-[11px] font-medium text-ink">Filename or URL</label>
           <p className="text-[11px] text-muted">
-            Use a file in <code className="rounded bg-slate-100 px-1">public/photos/</code>.
+            Use a file in <code className="rounded bg-white/10 px-1">public/photos/</code>.
           </p>
           <input
             type="text"
@@ -129,7 +132,7 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
               }
             }}
             placeholder="tamar.png  or  https://…"
-            className="mt-1 w-full rounded border border-border px-2 py-1 text-xs font-mono outline-none focus:border-indigo-400"
+            className="mt-1 w-full rounded border border-white/15 bg-white/[0.04] px-2 py-1 text-xs font-mono text-ink outline-none focus:border-accent/60"
           />
 
           <div className="mt-3 flex justify-between">
@@ -152,14 +155,14 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
                   setDraft(person.photoUrl);
                   setOpen(false);
                 }}
-                className="rounded px-2 py-1 text-xs text-muted hover:bg-slate-100"
+                className="rounded px-2 py-1 text-xs text-muted hover:bg-white/10 hover:text-ink"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={commit}
-                className="rounded bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+                className="rounded bg-accent px-2.5 py-1 text-xs font-semibold text-canvas hover:opacity-90"
               >
                 Save
               </button>

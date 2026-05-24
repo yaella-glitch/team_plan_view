@@ -32,7 +32,7 @@ export function SubTeamsCanvas() {
         <button
           type="button"
           onClick={() => addSubTeam()}
-          className="rounded-full border border-border bg-white px-2.5 py-1 text-sm text-muted shadow-sm hover:border-indigo-300 hover:text-indigo-700"
+          className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-sm text-muted hover:border-accent/60 hover:text-ink"
           title="Add sub-team"
         >
           +
@@ -42,7 +42,7 @@ export function SubTeamsCanvas() {
       <UnassignedPool people={unassigned} />
 
       {subTeams.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-border bg-white p-12 text-center text-sm italic text-muted">
+        <div className="mt-5 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center text-sm italic text-muted">
           No sub-teams yet. Hit the + to create one.
         </div>
       ) : (
@@ -64,11 +64,11 @@ function UnassignedPool({ people }: { people: Person[] }) {
       ref={setNodeRef}
       className={[
         'rounded-2xl border-2 border-dashed p-4 transition-colors',
-        isOver ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50/60',
+        isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.02]',
       ].join(' ')}
     >
       <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-        Unassigned <span className="ml-1 normal-case text-slate-400">({people.length})</span>
+        Unassigned <span className="ml-1 normal-case text-muted/60">({people.length})</span>
       </p>
       {people.length === 0 ? (
         <p className="text-xs italic text-muted">All team members assigned.</p>
@@ -101,7 +101,8 @@ function SubTeamBox({ subTeam, people }: { subTeam: SubTeam; people: Person[] })
     .filter((p): p is Person => Boolean(p));
 
   return (
-    <article className="flex min-h-[280px] flex-col gap-4 rounded-3xl border border-border bg-surface p-5 shadow-sm">
+    <article className="card-gradient">
+      <div className="card-gradient-inner flex min-h-[280px] flex-col gap-4 p-5">
       {/* Header — title + editable label + delete */}
       <div className="flex items-start gap-2">
         <div className="flex-1">
@@ -178,6 +179,7 @@ function SubTeamBox({ subTeam, people }: { subTeam: SubTeam; people: Person[] })
 
       {/* Members area */}
       <MembersArea subTeamId={subTeam.id} members={members} />
+      </div>
     </article>
   );
 }
@@ -191,7 +193,7 @@ function ManagerSlot({ subTeamId, manager }: { subTeamId: string; manager: Perso
         ref={setNodeRef}
         className={[
           'flex min-h-[64px] items-center gap-2 rounded-2xl border-2 border-dashed px-3 py-2 transition-colors',
-          isOver ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50/40',
+          isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.03]',
         ].join(' ')}
       >
         {manager ? (
@@ -215,7 +217,7 @@ function MembersArea({ subTeamId, members }: { subTeamId: string; members: Perso
         ref={setNodeRef}
         className={[
           'flex min-h-[80px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed px-3 py-2.5 transition-colors',
-          isOver ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50/40',
+          isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.03]',
         ].join(' ')}
       >
         {members.length === 0 ? (
@@ -244,12 +246,12 @@ function PhotoChip({ person, size = 'md' }: { person: Person; size?: 'md' | 'lg'
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }}
-      className="inline-flex cursor-grab items-center gap-2 rounded-full border border-border bg-white py-1 pl-1 pr-3 shadow-sm hover:shadow-md active:cursor-grabbing"
+      className="inline-flex cursor-grab items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] py-1 pl-1 pr-3 shadow-sm backdrop-blur hover:bg-white/10 active:cursor-grabbing"
       {...listeners}
       {...attributes}
       title={person.name}
     >
-      <div className={`${dim} overflow-hidden rounded-full ring-1 ring-slate-200`}>
+      <div className={`${dim} overflow-hidden rounded-full ring-1 ring-white/15`}>
         {photo && !imgFailed ? (
           <img
             src={photo}
@@ -261,7 +263,7 @@ function PhotoChip({ person, size = 'md' }: { person: Person; size?: 'md' | 'lg'
           <div
             className={[
               'flex h-full w-full items-center justify-center font-semibold',
-              imgFailed ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-600',
+              imgFailed ? 'bg-rose-500/20 text-rose-300' : 'bg-white/10 text-muted',
             ].join(' ')}
           >
             {imgFailed ? '!' : initials(person.name)}

@@ -43,7 +43,7 @@ export function About() {
           type="button"
           onClick={prev}
           aria-label="Previous slide"
-          className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-ink shadow-md ring-1 ring-border hover:bg-white"
+          className="absolute -left-3 top-1/2 -translate-y-1/2 rounded-full bg-surface/90 p-2 text-ink shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-surface"
         >
           <ChevronLeft />
         </button>
@@ -51,7 +51,7 @@ export function About() {
           type="button"
           onClick={next}
           aria-label="Next slide"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-2 text-ink shadow-md ring-1 ring-border hover:bg-white"
+          className="absolute -right-3 top-1/2 -translate-y-1/2 rounded-full bg-surface/90 p-2 text-ink shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-surface"
         >
           <ChevronRight />
         </button>
@@ -67,7 +67,7 @@ export function About() {
             aria-label={`Go to slide ${i + 1}: ${s.label}`}
             className={[
               'h-2 rounded-full transition-all',
-              i === active ? 'w-8 bg-indigo-500' : 'w-2 bg-slate-300 hover:bg-slate-400',
+              i === active ? 'w-8 bg-accent' : 'w-2 bg-white/20 hover:bg-white/40',
             ].join(' ')}
           />
         ))}
@@ -114,16 +114,17 @@ function Slide({
   };
 
   return (
-    <div className="mx-auto overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
+    <div className="card-gradient mx-auto">
+      <div className="card-gradient-inner">
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="group relative block aspect-[16/9] w-full overflow-hidden bg-slate-50"
+        className="group relative block aspect-[16/9] w-full overflow-hidden"
       >
         {image?.dataUrl ? (
           <img src={image.dataUrl} alt={label} className="h-full w-full object-contain" />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-3 border-2 border-dashed border-slate-200 text-center text-muted">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center text-muted">
             <span className="text-5xl">🖼</span>
             <span className="text-lg font-semibold text-ink">{label}</span>
             <span className="text-sm italic">{placeholder}</span>
@@ -135,8 +136,8 @@ function Slide({
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
 
-      <div className="flex items-center gap-2 border-t border-border bg-white px-4 py-2.5">
-        <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
+      <div className="flex items-center gap-2 border-t border-white/10 px-4 py-2.5">
+        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
           {label}
         </span>
         {editingCaption ? (
@@ -156,7 +157,7 @@ function Slide({
               }
             }}
             placeholder={`${label} caption…`}
-            className="flex-1 bg-transparent text-sm outline-none border-b border-indigo-200"
+            className="flex-1 bg-transparent text-sm text-ink outline-none border-b border-accent/40"
           />
         ) : (
           <span
@@ -167,6 +168,7 @@ function Slide({
             {image?.caption || <span className="italic text-muted">Add a caption</span>}
           </span>
         )}
+      </div>
       </div>
     </div>
   );

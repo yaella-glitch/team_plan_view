@@ -57,7 +57,7 @@ export function Backlog() {
           ref={setNodeRef}
           className={[
             'min-h-[72px] rounded-2xl border-2 border-dashed p-3 transition-colors',
-            isOver ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50/60',
+            isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.02]',
           ].join(' ')}
         >
           <SortableContext items={chips.map((c) => chipDragId(c.id))} strategy={horizontalListSortingStrategy}>
@@ -92,14 +92,16 @@ function ActionCard({
     <button
       type="button"
       onClick={onClick}
-      className="group flex items-center gap-4 rounded-2xl border border-border bg-white p-5 text-left shadow-sm transition-all hover:border-indigo-300 hover:shadow-md"
+      className="card-gradient-subtle group block text-left"
     >
-      <span className="text-3xl">{icon}</span>
-      <div className="flex-1">
-        <div className="text-base font-semibold text-ink">+ {title}</div>
-        <div className="text-xs text-muted">{subtitle}</div>
+      <div className="card-gradient-inner flex items-center gap-4 p-5">
+        <span className="text-3xl">{icon}</span>
+        <div className="flex-1">
+          <div className="text-base font-semibold text-ink">+ {title}</div>
+          <div className="text-xs text-muted">{subtitle}</div>
+        </div>
+        <span className="text-2xl text-muted/50 transition-colors group-hover:text-accent">→</span>
       </div>
-      <span className="text-2xl text-slate-300 transition-colors group-hover:text-indigo-500">→</span>
     </button>
   );
 }
@@ -122,13 +124,11 @@ function AddOwnershipModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur"
       onClick={onClose}
     >
-      <div
-        className="w-full max-w-md rounded-3xl border border-border bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="card-gradient w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="card-gradient-inner p-6">
         <h3 className="text-lg font-bold text-ink">Add ownership area</h3>
         <p className="mt-1 text-xs text-muted">It'll live in the Unassigned area below — drag onto a PMM to assign.</p>
 
@@ -136,10 +136,10 @@ function AddOwnershipModal({
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as Category)}
-          className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+          className="mt-1 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-ink outline-none focus:border-accent/60"
         >
           {CATEGORIES.map((c) => (
-            <option key={c.id} value={c.id}>
+            <option key={c.id} value={c.id} className="bg-surface text-ink">
               {c.icon} {c.label}
             </option>
           ))}
@@ -157,14 +157,14 @@ function AddOwnershipModal({
             else if (e.key === 'Escape') onClose();
           }}
           placeholder="e.g. Enterprise ARR"
-          className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-indigo-400"
+          className="mt-1 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-ink outline-none focus:border-accent/60"
         />
 
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-4 py-2 text-sm text-muted hover:bg-slate-100"
+            className="rounded-full px-4 py-2 text-sm text-muted hover:bg-white/5 hover:text-ink"
           >
             Cancel
           </button>
@@ -172,10 +172,11 @@ function AddOwnershipModal({
             type="button"
             onClick={submit}
             disabled={!label.trim()}
-            className="rounded-full bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-canvas hover:opacity-90 disabled:opacity-50"
           >
             Add
           </button>
+        </div>
         </div>
       </div>
     </div>

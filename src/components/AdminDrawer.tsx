@@ -10,7 +10,7 @@ export function AdminDrawer() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed right-4 top-14 z-30 flex items-center gap-2 rounded-full border border-border bg-white/90 px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur hover:bg-white"
+        className="fixed right-4 top-14 z-30 flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur hover:bg-white/10"
         title="Open admin panel"
       >
         ⚙ Admin
@@ -29,13 +29,16 @@ function Drawer({ onClose }: { onClose: () => void }) {
         onClick={onClose}
         aria-label="Close admin panel"
       />
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
-        <header className="flex items-center justify-between border-b border-border px-5 py-4">
+      <aside
+        className="absolute right-0 top-0 flex h-full w-full max-w-md flex-col shadow-2xl"
+        style={{ background: 'rgb(var(--surface))' }}
+      >
+        <header className="flex items-center justify-between border-b border-white/10 px-5 py-4">
           <h2 className="text-lg font-bold text-ink">Admin</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-2 py-1 text-muted hover:bg-slate-100 hover:text-ink"
+            className="rounded-full px-2 py-1 text-muted hover:bg-white/10 hover:text-ink"
           >
             ×
           </button>
@@ -71,7 +74,7 @@ function PMMsSection() {
               const name = prompt('New PMM name?');
               if (name && name.trim()) addPerson(name.trim());
             }}
-            className="rounded-full border border-border bg-white px-2.5 py-0.5 text-xs text-muted hover:border-indigo-300 hover:text-indigo-700"
+            className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-xs text-muted hover:border-accent/60 hover:text-ink"
           >
             + Add
           </button>
@@ -82,12 +85,12 @@ function PMMsSection() {
         {people.map((p) => {
           const photo = resolvePhotoUrl(p.photoUrl);
           return (
-            <li key={p.id} className="flex items-center gap-2 rounded-lg border border-border bg-white px-2 py-1.5">
-              <div className="h-7 w-7 overflow-hidden rounded-full bg-slate-100">
+            <li key={p.id} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5">
+              <div className="h-7 w-7 overflow-hidden rounded-full bg-white/5">
                 {photo ? (
                   <img src={photo} alt={p.name} className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-500">
+                  <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-muted">
                     {initials(p.name)}
                   </div>
                 )}
@@ -130,7 +133,7 @@ function AboutSection() {
           return (
             <li
               key={l}
-              className="flex items-center gap-2 rounded-lg border border-border bg-white px-2 py-1.5"
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5"
             >
               <span className="w-16 text-xs font-semibold uppercase tracking-wide text-muted">{l}</span>
               <span className="flex-1 truncate text-sm text-ink">
@@ -170,7 +173,7 @@ function LatestSection() {
           <button
             type="button"
             onClick={addLatestItem}
-            className="rounded-full border border-border bg-white px-2.5 py-0.5 text-xs text-muted hover:border-indigo-300 hover:text-indigo-700"
+            className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-xs text-muted hover:border-accent/60 hover:text-ink"
           >
             + Add
           </button>
@@ -183,13 +186,13 @@ function LatestSection() {
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex items-center gap-2 rounded-lg border border-border bg-white px-2 py-1.5"
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5"
             >
-              <div className="h-7 w-10 overflow-hidden rounded bg-slate-100">
+              <div className="h-7 w-10 overflow-hidden rounded bg-white/5">
                 {item.dataUrl ? (
                   <img src={item.dataUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">🖼</div>
+                  <div className="flex h-full w-full items-center justify-center text-xs text-muted">🖼</div>
                 )}
               </div>
               <span className="flex-1 truncate text-sm text-ink">
@@ -228,7 +231,7 @@ function SubTeamsSection() {
           <button
             type="button"
             onClick={() => addSubTeam()}
-            className="rounded-full border border-border bg-white px-2.5 py-0.5 text-xs text-muted hover:border-indigo-300 hover:text-indigo-700"
+            className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-xs text-muted hover:border-accent/60 hover:text-ink"
           >
             + Add
           </button>
@@ -241,7 +244,7 @@ function SubTeamsSection() {
           {subTeams.map((st) => (
             <li
               key={st.id}
-              className="flex items-center gap-2 rounded-lg border border-border bg-white px-2 py-1.5"
+              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5"
             >
               <span className="flex-1 truncate text-sm text-ink">{st.title}</span>
               <span className="text-[11px] text-muted">
@@ -271,8 +274,8 @@ function DangerZone() {
   const resetToSeed = useStore((s) => s.resetToSeed);
 
   return (
-    <section className="border-t border-border pt-5">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-rose-600">Danger zone</h3>
+    <section className="border-t border-white/10 pt-5">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-rose-300">Danger zone</h3>
       <button
         type="button"
         onClick={() => {
@@ -283,7 +286,7 @@ function DangerZone() {
           )
             resetToSeed();
         }}
-        className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-100"
+        className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm font-medium text-rose-200 hover:bg-rose-500/20"
       >
         Reset all content to seed
       </button>

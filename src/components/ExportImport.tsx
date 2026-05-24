@@ -41,11 +41,11 @@ export function ExportImport() {
   };
 
   return (
-    <div className="fixed right-4 top-4 z-30 flex gap-2 rounded-full border border-border bg-white/90 px-2 py-1 shadow-sm backdrop-blur">
+    <div className="fixed right-4 top-4 z-30 flex gap-1 rounded-full border border-white/15 bg-white/[0.06] px-2 py-1 shadow-sm backdrop-blur">
       <button
         type="button"
         onClick={onExport}
-        className="rounded-full px-3 py-1 text-xs font-medium text-ink hover:bg-slate-100"
+        className="rounded-full px-3 py-1 text-xs font-medium text-ink hover:bg-white/10"
         title="Download current state as JSON"
       >
         ↓ Export
@@ -53,7 +53,7 @@ export function ExportImport() {
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="rounded-full px-3 py-1 text-xs font-medium text-ink hover:bg-slate-100"
+        className="rounded-full px-3 py-1 text-xs font-medium text-ink hover:bg-white/10"
         title="Load state from a JSON file"
       >
         ↑ Import
@@ -64,7 +64,7 @@ export function ExportImport() {
         onClick={() => {
           if (confirm('Reset all changes to the original seed data?')) resetToSeed();
         }}
-        className="rounded-full px-3 py-1 text-xs font-medium text-muted hover:bg-rose-50 hover:text-rose-600"
+        className="rounded-full px-3 py-1 text-xs font-medium text-muted hover:bg-rose-500/15 hover:text-rose-300"
         title="Restore seed data"
       >
         ↺ Reset

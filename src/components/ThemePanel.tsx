@@ -27,7 +27,7 @@ export function ThemePanel() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-full border border-border bg-white/90 px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur hover:bg-white"
+        className="flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur hover:bg-white/10"
         title="Open theme panel"
       >
         <span className="flex h-3 w-3 rounded-full" style={{ background: palette.accent }} />
@@ -35,7 +35,10 @@ export function ThemePanel() {
       </button>
 
       {open && (
-        <div className="mt-2 w-72 rounded-2xl border border-border bg-white p-4 shadow-xl">
+        <div
+          className="mt-2 w-72 rounded-2xl border border-white/10 p-4 shadow-xl"
+          style={{ background: 'rgb(var(--surface))' }}
+        >
           <div className="mb-3 flex items-center justify-between">
             <h4 className="text-sm font-semibold">Palette</h4>
             <button
@@ -80,7 +83,7 @@ function PresetButton({ label, onClick }: { label: string; onClick: () => void }
     <button
       type="button"
       onClick={onClick}
-      className="rounded-full border border-border bg-white px-2.5 py-1 text-xs text-ink hover:border-indigo-300 hover:text-indigo-700"
+      className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-xs text-ink hover:border-accent/60"
     >
       {label}
     </button>
@@ -116,7 +119,7 @@ function ColorRow({
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-8 w-8 cursor-pointer rounded border border-border"
+        className="h-8 w-8 cursor-pointer rounded border border-white/15"
         aria-label={`${label} color picker`}
       />
       <div className="min-w-0 flex-1">
@@ -130,7 +133,7 @@ function ColorRow({
             onKeyDown={(e) => {
               if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
             }}
-            className="ml-auto w-20 rounded border border-border px-1.5 py-0.5 text-[11px] font-mono text-ink focus:border-indigo-400 focus:outline-none"
+            className="ml-auto w-20 rounded border border-white/15 bg-white/[0.04] px-1.5 py-0.5 text-[11px] font-mono text-ink focus:border-accent/60 focus:outline-none"
           />
         </div>
         <p className="text-[11px] text-muted">{hint}</p>

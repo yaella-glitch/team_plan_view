@@ -11,15 +11,17 @@ export type Palette = {
 };
 
 export const DEFAULT_PALETTE: Palette = {
-  canvas: '#f8fafc',
-  surface: '#ffffff',
-  ink: '#0f172a',
-  muted: '#64748b',
-  accent: '#6366f1',
-  border: '#e2e8f0',
+  // monday dark
+  canvas: '#06060e',
+  surface: '#111120',
+  ink: '#f0f0fa',
+  muted: '#9c9eb8',
+  accent: '#a58aff',
+  border: '#313152',
 };
 
 export const MONDAY_PALETTE: Palette = {
+  // monday light (alternate preset)
   canvas: '#f6f7fb',
   surface: '#ffffff',
   ink: '#323338',

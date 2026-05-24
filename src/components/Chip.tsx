@@ -55,7 +55,7 @@ export function Chip({ chip, compact = false }: Props) {
         'group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs',
         meta.tint,
         meta.border,
-        chip.isPrimary ? 'font-semibold shadow-sm ring-1 ring-indigo-300 ring-offset-1' : '',
+        chip.isPrimary ? 'font-semibold ring-1 ring-white/30' : '',
         compact ? 'text-[11px] px-2 py-0.5' : '',
         'select-none',
       ].join(' ')}

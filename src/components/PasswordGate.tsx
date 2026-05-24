@@ -61,16 +61,17 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
   if (unlocked) return <>{children}</>;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-rose-50 px-4">
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: 'rgb(var(--canvas))' }}>
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-md rounded-3xl border border-border bg-white p-8 shadow-xl"
+        className="card-gradient w-full max-w-md"
       >
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-indigo-200/60 bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">
-          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+        <div className="card-gradient-inner p-8">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/15 px-3 py-1 text-xs font-medium text-accent">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           Restricted access
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-ink">AI work platform PMMs</h1>
+        <h1 className="text-3xl font-light tracking-tight text-ink">AI work platform PMMs</h1>
         <p className="mt-2 text-sm text-muted">Enter the team password to view the plan.</p>
 
         <label className="mt-6 block text-xs font-semibold uppercase tracking-wide text-muted">
@@ -81,18 +82,18 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-1.5 w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+          className="mt-1.5 w-full rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-base text-ink outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
           placeholder="••••••••"
         />
 
         {error && (
-          <p className="mt-2 text-sm text-rose-600">{error}</p>
+          <p className="mt-2 text-sm text-rose-300">{error}</p>
         )}
 
         <button
           type="submit"
           disabled={submitting || password.length === 0}
-          className="mt-6 w-full rounded-xl bg-indigo-600 px-4 py-3 text-base font-semibold text-white shadow-sm transition-opacity hover:bg-indigo-700 disabled:opacity-50"
+          className="mt-6 w-full rounded-xl bg-accent px-4 py-3 text-base font-semibold text-canvas shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {submitting ? 'Checking…' : 'Unlock'}
         </button>
@@ -100,6 +101,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
         <p className="mt-6 text-center text-[11px] text-muted">
           Lost the password? Ask Yaella.
         </p>
+        </div>
       </form>
     </div>
   );

@@ -3,13 +3,14 @@
 @tailwind utilities;
 
 :root {
-  /* Default palette — replace once user provides her palette */
-  --canvas: 248 250 252;       /* slate-50 — the page background */
-  --surface: 255 255 255;      /* card backgrounds */
-  --ink: 15 23 42;             /* slate-900 — primary text */
-  --muted: 100 116 139;        /* slate-500 — secondary text */
-  --accent: 99 102 241;        /* indigo-500 — primary brand */
-  --border: 226 232 240;       /* slate-200 */
+  /* monday dark — default theme */
+  --canvas: 6 6 14;            /* near-black with a hint of blue */
+  --surface: 17 17 32;         /* card body */
+  --surface-2: 23 23 41;       /* nested surfaces */
+  --ink: 240 240 250;          /* near-white */
+  --muted: 156 158 184;        /* secondary text — soft lavender gray */
+  --accent: 165 138 255;       /* brand purple */
+  --border: 49 49 82;          /* card outline (gradient takes over where used) */
 }
 
 html, body, #root {
@@ -22,17 +23,91 @@ body {
   color: rgb(var(--ink));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Subtle grid background */
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-attachment: fixed;
 }
 
-/* Subtle scrollbar */
+/* ---------------------------------------------------------------------------
+ * Gradient-bordered card utility
+ *
+ *   <div className="card-gradient">
+ *     <div className="card-gradient-inner">...content...</div>
+ *   </div>
+ *
+ * Outer = gradient. Inner = surface bg leaving a 1px gradient reveal.
+ * Inner also gets a soft radial glow in the upper-left for depth.
+ * --------------------------------------------------------------------------- */
+.card-gradient {
+  position: relative;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(165, 138, 255, 0.7) 0%,
+    rgba(99, 102, 241, 0.45) 30%,
+    rgba(56, 189, 248, 0.18) 55%,
+    rgba(165, 138, 255, 0.05) 80%,
+    rgba(165, 138, 255, 0.7) 100%
+  );
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
+}
+.card-gradient-inner {
+  position: relative;
+  border-radius: 19px;
+  background:
+    radial-gradient(ellipse 100% 80% at 10% 0%, rgba(99, 102, 241, 0.18), transparent 60%),
+    rgb(var(--surface));
+  overflow: hidden;
+}
+.card-gradient:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(165, 138, 255, 0.9) 0%,
+    rgba(99, 102, 241, 0.65) 30%,
+    rgba(56, 189, 248, 0.32) 55%,
+    rgba(165, 138, 255, 0.15) 80%,
+    rgba(165, 138, 255, 0.9) 100%
+  );
+}
+
+.card-gradient-subtle {
+  position: relative;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(165, 138, 255, 0.4) 0%,
+    rgba(99, 102, 241, 0.2) 50%,
+    rgba(165, 138, 255, 0.1) 100%
+  );
+}
+.card-gradient-subtle > .card-gradient-inner {
+  border-radius: 15px;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--border));
+  background: rgba(165, 138, 255, 0.2);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(var(--muted) / 0.4);
+  background: rgba(165, 138, 255, 0.4);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Selection */
+::selection {
+  background: rgba(165, 138, 255, 0.3);
+  color: rgb(var(--ink));
 }

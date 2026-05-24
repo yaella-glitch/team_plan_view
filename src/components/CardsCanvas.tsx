@@ -28,7 +28,7 @@ export function CardsCanvas() {
       <div className="flex gap-5">
         {/* Left strip: ~15% photo carousel */}
         <aside className="w-[88px] shrink-0">
-          <div className="sticky top-4 max-h-[80vh] overflow-y-auto rounded-2xl border border-border bg-white p-1.5 shadow-sm">
+          <div className="sticky top-4 max-h-[80vh] overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 shadow-sm backdrop-blur">
             <ul className="flex flex-col gap-1.5">
               {people.map((p) => (
                 <PhotoTile
@@ -47,7 +47,7 @@ export function CardsCanvas() {
           {selected ? (
             <PersonCard person={selected} />
           ) : (
-            <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center text-sm italic text-muted">
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center text-sm italic text-muted">
               No team members yet. Click "+ Add PMM" above.
             </div>
           )}
@@ -77,14 +77,14 @@ function PhotoTile({
         onClick={onSelect}
         className={[
           'group flex w-full flex-col items-center gap-1 rounded-lg p-1 transition-all',
-          active ? 'bg-indigo-50 ring-2 ring-indigo-400' : 'hover:bg-slate-50',
+          active ? 'bg-accent/15 ring-2 ring-accent/60' : 'hover:bg-white/5',
         ].join(' ')}
         title={person.name}
       >
         <div
           className={[
             'aspect-square w-full overflow-hidden rounded-lg ring-2',
-            active ? 'ring-indigo-300' : 'ring-slate-100 group-hover:ring-indigo-100',
+            active ? 'ring-accent/60' : 'ring-white/10 group-hover:ring-accent/30',
           ].join(' ')}
         >
           {photo && !imgFailed ? (
@@ -98,7 +98,7 @@ function PhotoTile({
             <div
               className={[
                 'flex h-full w-full items-center justify-center text-base font-bold',
-                imgFailed ? 'bg-rose-100 text-rose-500' : 'bg-slate-200 text-slate-500',
+                imgFailed ? 'bg-rose-500/20 text-rose-300' : 'bg-white/10 text-muted',
               ].join(' ')}
             >
               {imgFailed ? '!' : initials(person.name)}
@@ -108,7 +108,7 @@ function PhotoTile({
         <span
           className={[
             'w-full truncate text-center text-[10px] leading-tight',
-            active ? 'font-semibold text-indigo-700' : 'text-muted',
+            active ? 'font-semibold text-accent' : 'text-muted',
           ].join(' ')}
         >
           {person.name}
