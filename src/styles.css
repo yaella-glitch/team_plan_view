@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Default palette — replace once user provides her palette */
+  --canvas: 248 250 252;       /* slate-50 — the page background */
+  --surface: 255 255 255;      /* card backgrounds */
+  --ink: 15 23 42;             /* slate-900 — primary text */
+  --muted: 100 116 139;        /* slate-500 — secondary text */
+  --accent: 99 102 241;        /* indigo-500 — primary brand */
+  --border: 226 232 240;       /* slate-200 */
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: rgb(var(--canvas));
+  color: rgb(var(--ink));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border));
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--muted) / 0.4);
+}

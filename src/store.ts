@@ -1,0 +1,254 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { nanoid } from 'nanoid';
+import type { AppState, Category, ChipValue, Person } from './types';
+import { buildSeed } from './seed';
+
+type Actions = {
+  // Chip operations
+  addChip: (category: Category, ownerId: string | null, label?: string) => string;
+  updateChipLabel: (chipId: string, label: string) => void;
+  deleteChip: (chipId: string) => void;
+  moveChip: (chipId: string, opts: { ownerId: string | null; category?: Category; targetIndex?: number }) => void;
+  toggleChipPrimary: (chipId: string) => void;
+  reorderChip: (chipId: string, targetIndex: number) => void;
+
+  // Person operations
+  addPerson: (name: string) => string;
+  updatePerson: (id: string, patch: Partial<Person>) => void;
+  removePerson: (id: string) => void;
+  hideCategoryForPerson: (personId: string, category: Category) => void;
+  showCategoryForPerson: (personId: string, category: Category) => void;
+
+  // Topic tab
+  setActiveTopicTab: (cat: Category) => void;
+
+  // Bulk
+  replaceState: (s: AppState) => void;
+  resetToSeed: () => void;
+};
+
+type Store = AppState & Actions;
+
+const initial: AppState = buildSeed();
+
+function normalizeOrder(chips: ChipValue[], ownerId: string | null, category: Category): ChipValue[] {
+  // Re-number the order field for chips matching this (owner, category) bucket so they're 0..n-1.
+  const inBucket = chips
+    .filter((c) => c.ownerId === ownerId && c.category === category)
+    .sort((a, b) => a.order - b.order);
+  inBucket.forEach((c, i) => {
+    c.order = i;
+  });
+  return chips;
+}
+
+export const useStore = create<Store>()(
+  persist(
+    (set, get) => ({
+      ...initial,
+
+      addChip: (category, ownerId, label = 'New item') => {
+        const id = nanoid(8);
+        set((state) => {
+          const existing = state.chips.filter((c) => c.ownerId === ownerId && c.category === category);
+          const chip: ChipValue = {
+            id,
+            label,
+            category,
+            ownerId,
+            order: existing.length,
+            isPrimary: existing.length === 0,
+          };
+          return { chips: [...state.chips, chip] };
+        });
+        return id;
+      },
+
+      updateChipLabel: (chipId, label) =>
+        set((state) => ({
+          chips: state.chips.map((c) => (c.id === chipId ? { ...c, label } : c)),
+        })),
+
+      deleteChip: (chipId) =>
+        set((state) => {
+          const removed = state.chips.find((c) => c.id === chipId);
+          if (!removed) return {};
+          const remaining = state.chips.filter((c) => c.id !== chipId).map((c) => ({ ...c }));
+          normalizeOrder(remaining, removed.ownerId, removed.category);
+          // If we removed the primary, promote the new top of that bucket.
+          if (removed.isPrimary) {
+            const top = remaining
+              .filter((c) => c.ownerId === removed.ownerId && c.category === removed.category)
+              .sort((a, b) => a.order - b.order)[0];
+            if (top) top.isPrimary = true;
+          }
+          return { chips: remaining };
+        }),
+
+      moveChip: (chipId, opts) =>
+        set((state) => {
+          const chip = state.chips.find((c) => c.id === chipId);
+          if (!chip) return {};
+          const prevOwner = chip.ownerId;
+          const prevCategory = chip.category;
+          const nextOwner = opts.ownerId;
+          const nextCategory = opts.category ?? chip.category;
+
+          const others = state.chips.filter((c) => c.id !== chipId).map((c) => ({ ...c }));
+          const updated: ChipValue = {
+            ...chip,
+            ownerId: nextOwner,
+            category: nextCategory,
+            // Insert at target index in the destination bucket (or end).
+            order: 0,
+          };
+
+          const destBucket = others
+            .filter((c) => c.ownerId === nextOwner && c.category === nextCategory)
+            .sort((a, b) => a.order - b.order);
+          const targetIndex =
+            opts.targetIndex !== undefined ? Math.max(0, Math.min(destBucket.length, opts.targetIndex)) : destBucket.length;
+
+          destBucket.splice(targetIndex, 0, updated);
+          destBucket.forEach((c, i) => (c.order = i));
+
+          // Normalize source bucket ordering (if changed)
+          if (prevOwner !== nextOwner || prevCategory !== nextCategory) {
+            const srcBucket = others
+              .filter((c) => c.ownerId === prevOwner && c.category === prevCategory)
+              .sort((a, b) => a.order - b.order);
+            srcBucket.forEach((c, i) => (c.order = i));
+            // If chip was primary in source, promote new top.
+            if (chip.isPrimary && srcBucket.length > 0) {
+              srcBucket[0].isPrimary = true;
+              updated.isPrimary = false;
+            }
+          }
+
+          // Destination primary rules: if bucket had no chips before, this one becomes primary.
+          const destHadOthers = destBucket.length > 1;
+          if (!destHadOthers) {
+            updated.isPrimary = true;
+          } else if (updated.order !== 0) {
+            // Not at top — drop primary marker
+            // (existing top in destination keeps whatever it had)
+            updated.isPrimary = false;
+          }
+
+          // Build full chip list (excluding moved), then add updated chip back.
+          const next = others.filter((c) => c.id !== updated.id);
+          next.push(updated);
+          return { chips: next };
+        }),
+
+      toggleChipPrimary: (chipId) =>
+        set((state) => {
+          const chip = state.chips.find((c) => c.id === chipId);
+          if (!chip) return {};
+          return {
+            chips: state.chips.map((c) => {
+              if (c.ownerId !== chip.ownerId || c.category !== chip.category) return c;
+              if (c.id === chipId) return { ...c, isPrimary: !chip.isPrimary };
+              return chip.isPrimary ? c : { ...c, isPrimary: false };
+            }),
+          };
+        }),
+
+      reorderChip: (chipId, targetIndex) => {
+        const chip = get().chips.find((c) => c.id === chipId);
+        if (!chip) return;
+        get().moveChip(chipId, { ownerId: chip.ownerId, category: chip.category, targetIndex });
+      },
+
+      addPerson: (name) => {
+        const id = `p_${nanoid(6)}`;
+        set((state) => ({
+          people: [
+            ...state.people,
+            {
+              id,
+              name,
+              photoUrl: `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundType=gradientLinear`,
+              hiddenCategories: [],
+              order: state.people.length,
+            },
+          ],
+        }));
+        return id;
+      },
+
+      updatePerson: (id, patch) =>
+        set((state) => ({
+          people: state.people.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+        })),
+
+      removePerson: (id) =>
+        set((state) => ({
+          people: state.people.filter((p) => p.id !== id),
+          chips: state.chips.map((c) => (c.ownerId === id ? { ...c, ownerId: null } : c)),
+        })),
+
+      hideCategoryForPerson: (personId, category) =>
+        set((state) => ({
+          people: state.people.map((p) =>
+            p.id === personId
+              ? { ...p, hiddenCategories: [...new Set([...p.hiddenCategories, category])] }
+              : p,
+          ),
+        })),
+
+      showCategoryForPerson: (personId, category) =>
+        set((state) => ({
+          people: state.people.map((p) =>
+            p.id === personId ? { ...p, hiddenCategories: p.hiddenCategories.filter((c) => c !== category) } : p,
+          ),
+        })),
+
+      setActiveTopicTab: (cat) => set({ activeTopicTab: cat }),
+
+      replaceState: (s) => set(s),
+      resetToSeed: () => set(buildSeed()),
+    }),
+    {
+      name: 'team-plan-view-v1',
+      version: 1,
+    },
+  ),
+);
+
+// --- Selectors ----------------------------------------------------------------
+
+export function selectChipsFor(state: AppState, ownerId: string | null, category: Category): ChipValue[] {
+  return state.chips
+    .filter((c) => c.ownerId === ownerId && c.category === category)
+    .sort((a, b) => a.order - b.order);
+}
+
+export function selectChipsInCategory(state: AppState, category: Category): ChipValue[] {
+  return state.chips.filter((c) => c.category === category);
+}
+
+export function selectBacklog(state: AppState): ChipValue[] {
+  return state.chips.filter((c) => c.ownerId === null).sort((a, b) => a.order - b.order);
+}
+
+/**
+ * For OwnershipOverview: group chips in a category by label, so we can list
+ * each distinct label and show which people own it.
+ */
+export function selectTopicGroups(
+  state: AppState,
+  category: Category,
+): { label: string; chips: ChipValue[] }[] {
+  const chips = selectChipsInCategory(state, category).filter((c) => c.ownerId !== null);
+  const map = new Map<string, ChipValue[]>();
+  chips.forEach((c) => {
+    const key = c.label.trim().toLowerCase();
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(c);
+  });
+  return Array.from(map.values())
+    .map((group) => ({ label: group[0].label, chips: group }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
