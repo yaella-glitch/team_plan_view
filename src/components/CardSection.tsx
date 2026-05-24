@@ -56,8 +56,9 @@ export function CardSection({ ownerId, category, chips, onRemoveSection }: Props
             type="button"
             onClick={() => addChip(category, ownerId)}
             className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[11px] text-muted hover:border-indigo-400 hover:text-indigo-600"
+            title="Add"
           >
-            + add
+            +
           </button>
         </div>
       </SortableContext>

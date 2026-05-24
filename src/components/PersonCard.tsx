@@ -16,8 +16,6 @@ export function PersonCard({ person }: Props) {
 
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(person.name);
-  const [editingRole, setEditingRole] = useState(false);
-  const [draftRole, setDraftRole] = useState(person.role ?? '');
 
   const visibleCategories = CATEGORIES.filter((c) => !person.hiddenCategories.includes(c.id));
   const hiddenCategories = CATEGORIES.filter((c) => person.hiddenCategories.includes(c.id));
@@ -57,33 +55,6 @@ export function PersonCard({ person }: Props) {
             </h3>
           )}
 
-          {editingRole ? (
-            <input
-              autoFocus
-              value={draftRole}
-              onChange={(e) => setDraftRole(e.target.value)}
-              onBlur={() => {
-                updatePerson(person.id, { role: draftRole.trim() || undefined });
-                setEditingRole(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-                else if (e.key === 'Escape') {
-                  setDraftRole(person.role ?? '');
-                  setEditingRole(false);
-                }
-              }}
-              className="mt-0.5 w-full bg-transparent text-xs text-muted outline-none border-b border-indigo-200"
-            />
-          ) : (
-            <p
-              className="mt-0.5 cursor-text truncate text-xs text-muted"
-              onDoubleClick={() => setEditingRole(true)}
-              title="Double-click to edit role"
-            >
-              {person.role || <span className="italic opacity-60">add a role</span>}
-            </p>
-          )}
         </div>
 
         <button
@@ -116,7 +87,7 @@ export function PersonCard({ person }: Props) {
       {/* Add-section menu */}
       {hiddenCategories.length > 0 && (
         <details className="mt-3 text-xs">
-          <summary className="cursor-pointer text-muted hover:text-ink">+ Add section</summary>
+          <summary className="cursor-pointer text-muted hover:text-ink">+</summary>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {hiddenCategories.map((cat) => (
               <button

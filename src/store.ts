@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { AppState, Category, ChipValue, Person } from './types';
+import type { AboutImage, AppState, Category, ChipValue, LatestItem, Person, SubTeam } from './types';
 import { buildSeed } from './seed';
 
 type Actions = {
@@ -22,6 +22,21 @@ type Actions = {
 
   // Topic tab
   setActiveTopicTab: (cat: Category) => void;
+
+  // About images
+  setAboutImage: (index: number, img: AboutImage | null) => void;
+  setAboutCaption: (index: number, caption: string) => void;
+
+  // Latest items
+  addLatestItem: () => string;
+  updateLatestItem: (id: string, patch: Partial<LatestItem>) => void;
+  removeLatestItem: (id: string) => void;
+
+  // Sub-teams
+  addSubTeam: (title?: string) => string;
+  updateSubTeamTitle: (id: string, title: string) => void;
+  removeSubTeam: (id: string) => void;
+  moveMemberToSubTeam: (personId: string, subTeamId: string | null) => void;
 
   // Bulk
   replaceState: (s: AppState) => void;
@@ -206,6 +221,65 @@ export const useStore = create<Store>()(
         })),
 
       setActiveTopicTab: (cat) => set({ activeTopicTab: cat }),
+
+      // About
+      setAboutImage: (index, img) =>
+        set((state) => {
+          const next = [...(state.about ?? [null, null, null])];
+          while (next.length < 3) next.push(null);
+          next[index] = img;
+          return { about: next };
+        }),
+      setAboutCaption: (index, caption) =>
+        set((state) => {
+          const next = [...(state.about ?? [null, null, null])];
+          while (next.length < 3) next.push(null);
+          const cur = next[index];
+          next[index] = cur ? { ...cur, caption } : { dataUrl: '', caption };
+          return { about: next };
+        }),
+
+      // Latest
+      addLatestItem: () => {
+        const id = nanoid(8);
+        set((state) => ({ latest: [...(state.latest ?? []), { id }] }));
+        return id;
+      },
+      updateLatestItem: (id, patch) =>
+        set((state) => ({
+          latest: (state.latest ?? []).map((i) => (i.id === id ? { ...i, ...patch } : i)),
+        })),
+      removeLatestItem: (id) =>
+        set((state) => ({ latest: (state.latest ?? []).filter((i) => i.id !== id) })),
+
+      // Sub-teams
+      addSubTeam: (title = 'New sub-team') => {
+        const id = nanoid(8);
+        set((state) => ({
+          subTeams: [
+            ...(state.subTeams ?? []),
+            { id, title, memberIds: [], order: (state.subTeams ?? []).length },
+          ],
+        }));
+        return id;
+      },
+      updateSubTeamTitle: (id, title) =>
+        set((state) => ({
+          subTeams: (state.subTeams ?? []).map((s) => (s.id === id ? { ...s, title } : s)),
+        })),
+      removeSubTeam: (id) =>
+        set((state) => ({ subTeams: (state.subTeams ?? []).filter((s) => s.id !== id) })),
+      moveMemberToSubTeam: (personId, subTeamId) =>
+        set((state) => ({
+          subTeams: (state.subTeams ?? []).map((s) => {
+            if (s.id === subTeamId) {
+              return s.memberIds.includes(personId)
+                ? s
+                : { ...s, memberIds: [...s.memberIds, personId] };
+            }
+            return { ...s, memberIds: s.memberIds.filter((m) => m !== personId) };
+          }),
+        })),
 
       replaceState: (s) => set(s),
       resetToSeed: () => set(buildSeed()),

@@ -10,13 +10,13 @@ export function Backlog() {
   const { setNodeRef, isOver } = useDroppable({ id: BACKLOG_DROP_ID });
 
   return (
-    <section className="sticky bottom-0 z-20 mt-8 border-t border-border bg-white/80 backdrop-blur">
-      <div className="mx-auto max-w-7xl px-8 py-4">
-        <div className="mb-2 flex items-center justify-between">
+    <section className="mx-auto max-w-7xl px-8 py-12">
+      <div>
+        <div className="mb-3 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-ink">Backlog — not yet assigned</h3>
-            <p className="text-xs text-muted">
-              Drop responsibilities here to park them. Drag back onto a card to assign.
+            <h2 className="text-2xl font-bold text-ink">Backlog</h2>
+            <p className="mt-1 text-sm text-muted">
+              Responsibilities not yet assigned. Drop here to park; drag back onto a card to assign.
             </p>
           </div>
           <div className="flex gap-2">
@@ -31,7 +31,7 @@ export function Backlog() {
         <div
           ref={setNodeRef}
           className={[
-            'min-h-[64px] rounded-xl border-2 border-dashed p-3 transition-colors',
+            'min-h-[96px] rounded-2xl border-2 border-dashed p-4 transition-colors',
             isOver ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 bg-slate-50/60',
           ].join(' ')}
         >

@@ -10,8 +10,11 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { Hero } from './components/Hero';
+import { About } from './components/About';
+import { LatestGallery } from './components/LatestGallery';
 import { OwnershipOverview } from './components/OwnershipOverview';
 import { CardsCanvas } from './components/CardsCanvas';
+import { SubTeamsCanvas, UNASSIGNED_DROP_ID } from './components/SubTeamsCanvas';
 import { Backlog } from './components/Backlog';
 import { ExportImport } from './components/ExportImport';
 import { ThemePanel } from './components/ThemePanel';
@@ -22,38 +25,38 @@ import { resolvePhotoUrl } from './lib/photo';
 
 export default function App() {
   const moveChip = useStore((s) => s.moveChip);
+  const moveMemberToSubTeam = useStore((s) => s.moveMemberToSubTeam);
   const chips = useStore((s) => s.chips);
   const people = useStore((s) => s.people);
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
-  const [activePhotoChipId, setActivePhotoChipId] = useState<string | null>(null);
+  const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-  );
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const onDragStart = (e: DragStartEvent) => {
     const idStr = String(e.active.id);
-    if (idStr.startsWith('chip:')) setActiveChipId(decodeChipDragId(idStr));
-    else if (idStr.startsWith('photo:')) {
-      const chipId = e.active.data.current?.chipId as string | undefined;
-      if (chipId) setActivePhotoChipId(chipId);
+    if (idStr.startsWith('chip:')) {
+      setActiveChipId(decodeChipDragId(idStr));
+    } else if (idStr.startsWith('member:')) {
+      const personId = e.active.data.current?.personId as string | undefined;
+      if (personId) setActiveMemberId(personId);
     }
   };
 
   const onDragEnd = (e: DragEndEvent) => {
     setActiveChipId(null);
-    setActivePhotoChipId(null);
+    setActiveMemberId(null);
     if (!e.over) return;
     const activeIdStr = String(e.active.id);
     const overIdStr = String(e.over.id);
 
-    // CASE 1: Dragging a chip (from a card or backlog)
+    // CASE 1: chip drag (cards / backlog / overview rows)
     if (activeIdStr.startsWith('chip:')) {
       const chipId = decodeChipDragId(activeIdStr)!;
       const chip = chips.find((c) => c.id === chipId);
       if (!chip) return;
 
-      // If dropped on another chip → sortable in-bucket reorder
+      // Drop on another chip → sortable in-bucket reorder
       if (overIdStr.startsWith('chip:')) {
         const overChipId = decodeChipDragId(overIdStr)!;
         if (overChipId === chipId) return;
@@ -73,47 +76,27 @@ export default function App() {
         moveChip(chipId, { ownerId: dest.ownerId, category: dest.category });
       } else if (dest.kind === 'backlog') {
         moveChip(chipId, { ownerId: null, category: chip.category });
-      } else if (dest.kind === 'topic-item') {
-        // Drop a chip on a topic row in Overview — treat it as a recategorize
-        // to that category, owner unchanged. (Edge case — unusual but valid.)
-        moveChip(chipId, { ownerId: chip.ownerId, category: dest.category });
       }
       return;
     }
 
-    // CASE 2: Dragging a photo from the OwnershipOverview
-    if (activeIdStr.startsWith('photo:')) {
-      const chipId = e.active.data.current?.chipId as string | undefined;
-      if (!chipId) return;
-      const dest = decodeDropId(overIdStr);
-      if (!dest) return;
-
-      if (dest.kind === 'topic-item') {
-        // Reassign the chip's label to match the destination topic-row's label
-        const chip = chips.find((c) => c.id === chipId);
-        if (!chip) return;
-        // Find the canonical label from any chip in that bucket (case-preserving)
-        const sample = chips.find(
-          (c) => c.category === dest.category && c.label.trim().toLowerCase() === dest.labelKey,
-        );
-        const newLabel = sample ? sample.label : chip.label;
-        // Update label only if different
-        if (newLabel !== chip.label) {
-          useStore.getState().updateChipLabel(chipId, newLabel);
-        }
+    // CASE 2: sub-team member drag
+    if (activeIdStr.startsWith('member:')) {
+      const personId = e.active.data.current?.personId as string | undefined;
+      if (!personId) return;
+      if (overIdStr === UNASSIGNED_DROP_ID) {
+        moveMemberToSubTeam(personId, null);
         return;
       }
-      if (dest.kind === 'backlog') {
-        moveChip(chipId, { ownerId: null });
+      if (overIdStr.startsWith('subteam:')) {
+        const subTeamId = overIdStr.slice('subteam:'.length);
+        moveMemberToSubTeam(personId, subTeamId);
       }
     }
   };
 
   const activeChip = activeChipId ? chips.find((c) => c.id === activeChipId) : null;
-  const activePhotoChip = activePhotoChipId ? chips.find((c) => c.id === activePhotoChipId) : null;
-  const activePhotoPerson = activePhotoChip
-    ? people.find((p) => p.id === activePhotoChip.ownerId)
-    : null;
+  const activeMember = activeMemberId ? people.find((p) => p.id === activeMemberId) : null;
 
   return (
     <DndContext
@@ -124,12 +107,15 @@ export default function App() {
     >
       <ThemePanel />
       <ExportImport />
-      <main className="pb-32">
+      <main>
         <Hero />
+        <About />
+        <LatestGallery />
         <OwnershipOverview />
         <CardsCanvas />
+        <SubTeamsCanvas />
+        <Backlog />
       </main>
-      <Backlog />
 
       <DragOverlay>
         {activeChip ? (
@@ -141,10 +127,14 @@ export default function App() {
             <span>{activeChip.isPrimary ? '★' : '☆'}</span>
             <span>{activeChip.label}</span>
           </div>
-        ) : activePhotoPerson ? (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white py-0.5 pl-0.5 pr-2 shadow-lg">
-            <img src={resolvePhotoUrl(activePhotoPerson.photoUrl)} className="h-7 w-7 rounded-full" alt="" />
-            <span className="text-xs font-medium">{activePhotoPerson.name}</span>
+        ) : activeMember ? (
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white py-1 pl-1 pr-3 shadow-lg">
+            <img
+              src={resolvePhotoUrl(activeMember.photoUrl)}
+              className="h-8 w-8 rounded-full object-cover"
+              alt=""
+            />
+            <span className="text-xs font-medium">{activeMember.name}</span>
           </div>
         ) : null}
       </DragOverlay>

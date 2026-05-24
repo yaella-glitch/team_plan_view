@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
 import { useStore } from '../store';
 import { CATEGORIES, CATEGORY_BY_ID } from '../constants';
 import type { Category, ChipValue, Person } from '../types';
@@ -8,96 +8,115 @@ import { encodeSection, chipDragId } from '../lib/dnd';
 import { Chip } from './Chip';
 import { resolvePhotoUrl } from '../lib/photo';
 
+/**
+ * Per-category color treatment for the active tab.
+ * Mirrors the chip colors in constants.ts so the active tab visually
+ * matches the chip color you'll see for that category.
+ */
+const ACTIVE_TAB_STYLE: Record<Category, string> = {
+  pmmFocus: 'border-rose-300 bg-rose-50 text-rose-800 ring-rose-200',
+  businessKpi: 'border-amber-300 bg-amber-50 text-amber-800 ring-amber-200',
+  persona: 'border-emerald-300 bg-emerald-50 text-emerald-800 ring-emerald-200',
+  marketingFocal: 'border-sky-300 bg-sky-50 text-sky-800 ring-sky-200',
+  croCcoFocal: 'border-indigo-300 bg-indigo-50 text-indigo-800 ring-indigo-200',
+  productFocal: 'border-violet-300 bg-violet-50 text-violet-800 ring-violet-200',
+  agenticFlow: 'border-slate-300 bg-slate-100 text-slate-800 ring-slate-200',
+};
+
 export function OwnershipOverview() {
   const activeTab = useStore((s) => s.activeTopicTab);
   const setActiveTab = useStore((s) => s.setActiveTopicTab);
   const people = useStore((s) => s.people);
   const chips = useStore((s) => s.chips);
-  const addChip = useStore((s) => s.addChip);
   const meta = CATEGORY_BY_ID[activeTab];
 
   return (
-    <section className="mx-auto max-w-7xl px-8 py-6">
+    <section className="mx-auto max-w-7xl px-8 py-8">
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-ink">Ownership by topic</h2>
         <p className="mt-1 text-sm text-muted">
-          Pick a category and see what each PMM owns there. Drag chips between mini cards to reassign.
+          Click a topic to see what each PMM owns there.
         </p>
       </div>
 
-      {/* Sausage tabs */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((c) => {
-          const active = c.id === activeTab;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setActiveTab(c.id)}
-              className={[
-                'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all',
-                active
-                  ? 'border-indigo-300 bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200'
-                  : 'border-border bg-white text-muted hover:border-slate-300 hover:text-ink',
-              ].join(' ')}
-            >
-              <span className="text-base leading-none">{c.icon}</span>
-              {c.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Single bounded container */}
+      <div className="overflow-hidden rounded-3xl border border-border bg-white/70 shadow-sm">
+        {/* Tabs row — each tab takes its category's color when active */}
+        <div className="flex flex-wrap gap-2 border-b border-border/80 bg-white/60 px-5 py-4">
+          {CATEGORIES.map((c) => {
+            const active = c.id === activeTab;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setActiveTab(c.id)}
+                className={[
+                  'inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-all',
+                  active
+                    ? `${ACTIVE_TAB_STYLE[c.id]} font-semibold shadow-sm ring-1`
+                    : 'border-transparent text-muted hover:border-slate-200 hover:bg-white hover:text-ink',
+                ].join(' ')}
+              >
+                <span className="text-base leading-none">{c.icon}</span>
+                {c.label}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Active tab header */}
-      <div className={`mt-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold ${meta.tint}`}>
-        <span className="text-lg">{meta.icon}</span>
-        <span>{meta.label}</span>
-      </div>
+        {/* Active category indicator */}
+        <div className="flex items-center gap-2 border-b border-border/60 bg-slate-50/60 px-5 py-2.5 text-xs uppercase tracking-wide text-muted">
+          <span className="text-base">{meta.icon}</span>
+          <span>Showing</span>
+          <span className="font-semibold text-ink normal-case tracking-normal">{meta.label}</span>
+          <span className="ml-auto text-[11px] normal-case tracking-normal italic">
+            same team, different lens
+          </span>
+        </div>
 
-      {/* Mini cards grid — one per PMM */}
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {people.map((p) => (
-          <MiniCard
-            key={p.id}
-            person={p}
-            category={activeTab}
-            chips={chips
-              .filter((c) => c.ownerId === p.id && c.category === activeTab)
-              .sort((a, b) => a.order - b.order)}
-            onAdd={() => addChip(activeTab, p.id)}
-          />
-        ))}
+        {/* Rows of PMMs — photo + name + chips, inline, no card chrome */}
+        <ul className="divide-y divide-border/60">
+          {people.map((p) => (
+            <PersonRow
+              key={p.id}
+              person={p}
+              category={activeTab}
+              chips={chips
+                .filter((c) => c.ownerId === p.id && c.category === activeTab)
+                .sort((a, b) => a.order - b.order)}
+            />
+          ))}
+        </ul>
       </div>
     </section>
   );
 }
 
-function MiniCard({
+function PersonRow({
   person,
   category,
   chips,
-  onAdd,
 }: {
   person: Person;
   category: Category;
   chips: ChipValue[];
-  onAdd: () => void;
 }) {
+  const addChip = useStore((s) => s.addChip);
   const dropId = encodeSection(person.id, category);
   const { setNodeRef, isOver } = useDroppable({ id: dropId, data: { ownerId: person.id, category } });
   const photo = resolvePhotoUrl(person.photoUrl);
   const [imgFailed, setImgFailed] = useState(false);
 
   return (
-    <div
+    <li
       ref={setNodeRef}
       className={[
-        'flex flex-col overflow-hidden rounded-2xl border bg-surface shadow-sm transition-all',
-        isOver ? 'border-indigo-400 ring-2 ring-indigo-200' : 'border-border',
+        'flex items-center gap-4 px-5 py-3 transition-colors',
+        isOver ? 'bg-indigo-50/60' : 'hover:bg-slate-50/60',
       ].join(' ')}
     >
-      {/* Square photo */}
-      <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
+      {/* Photo */}
+      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white shadow-sm ring-1 ring-slate-200">
         {photo && !imgFailed ? (
           <img
             src={photo}
@@ -108,42 +127,37 @@ function MiniCard({
         ) : (
           <div
             className={[
-              'flex h-full w-full items-center justify-center text-3xl font-bold',
-              imgFailed ? 'bg-rose-50 text-rose-400' : 'text-slate-400',
+              'flex h-full w-full items-center justify-center text-xs font-semibold',
+              imgFailed ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-600',
             ].join(' ')}
-            title={imgFailed ? `Photo not found: ${person.photoUrl}` : ''}
           >
             {imgFailed ? '!' : initials(person.name)}
           </div>
         )}
       </div>
 
-      {/* Body */}
-      <div className="flex flex-1 flex-col gap-2 p-3">
-        <div className="min-w-0">
-          <h4 className="truncate text-sm font-semibold text-ink">{person.name}</h4>
-          {person.role && <p className="truncate text-[11px] text-muted">{person.role}</p>}
-        </div>
+      {/* Name */}
+      <div className="w-40 shrink-0 truncate text-sm font-medium text-ink">{person.name}</div>
 
-        <SortableContext items={chips.map((c) => chipDragId(c.id))} strategy={rectSortingStrategy}>
-          <div className="flex flex-wrap items-center gap-1.5 min-h-[24px]">
-            {chips.length === 0 ? (
-              <span className="text-[11px] italic text-muted">—</span>
-            ) : (
-              chips.map((c) => <Chip key={c.id} chip={c} compact />)
-            )}
-            <button
-              type="button"
-              onClick={onAdd}
-              className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[10px] text-muted hover:border-indigo-400 hover:text-indigo-600"
-              title={`Add ${CATEGORY_BY_ID[category].label}`}
-            >
-              +
-            </button>
-          </div>
-        </SortableContext>
-      </div>
-    </div>
+      {/* Chips */}
+      <SortableContext items={chips.map((c) => chipDragId(c.id))} strategy={horizontalListSortingStrategy}>
+        <div className="flex flex-1 flex-wrap items-center gap-1.5">
+          {chips.length === 0 ? (
+            <span className="text-xs italic text-muted">—</span>
+          ) : (
+            chips.map((c) => <Chip key={c.id} chip={c} compact />)
+          )}
+          <button
+            type="button"
+            onClick={() => addChip(category, person.id)}
+            className="rounded-full border border-dashed border-slate-300 px-2 py-0.5 text-[11px] text-muted hover:border-indigo-400 hover:text-indigo-600"
+            title="Add"
+          >
+            +
+          </button>
+        </div>
+      </SortableContext>
+    </li>
   );
 }
 

@@ -176,5 +176,8 @@ export function buildSeed(): AppState {
     people,
     chips,
     activeTopicTab: 'pmmFocus',
+    about: [null, null, null],
+    latest: [],
+    subTeams: [],
   };
 }
