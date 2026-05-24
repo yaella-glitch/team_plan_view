@@ -6,7 +6,6 @@ import type { Person } from '../types';
 
 export function CardsCanvas() {
   const people = useStore((s) => s.people);
-  const addPerson = useStore((s) => s.addPerson);
   const [selectedId, setSelectedId] = useState<string | null>(people[0]?.id ?? null);
 
   // Keep selection valid if people list changes.
@@ -22,33 +21,15 @@ export function CardsCanvas() {
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-12">
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-ink">Full team card</h2>
-          <p className="mt-1 text-sm text-muted">
-            Pick a teammate on the left. Their full card opens on the right.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            const name = prompt('New team member name?');
-            if (name && name.trim()) {
-              const id = addPerson(name.trim());
-              setSelectedId(id);
-            }
-          }}
-          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
-        >
-          + Add PMM
-        </button>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-ink">Full team card</h2>
       </div>
 
       <div className="flex gap-5">
         {/* Left strip: ~15% photo carousel */}
-        <aside className="w-[16%] min-w-[120px] shrink-0">
-          <div className="sticky top-4 max-h-[80vh] overflow-y-auto rounded-2xl border border-border bg-white p-2 shadow-sm">
-            <ul className="flex flex-col gap-2">
+        <aside className="w-[88px] shrink-0">
+          <div className="sticky top-4 max-h-[80vh] overflow-y-auto rounded-2xl border border-border bg-white p-1.5 shadow-sm">
+            <ul className="flex flex-col gap-1.5">
               {people.map((p) => (
                 <PhotoTile
                   key={p.id}
@@ -95,7 +76,7 @@ function PhotoTile({
         type="button"
         onClick={onSelect}
         className={[
-          'group flex w-full flex-col items-center gap-1 rounded-xl p-2 transition-all',
+          'group flex w-full flex-col items-center gap-1 rounded-lg p-1 transition-all',
           active ? 'bg-indigo-50 ring-2 ring-indigo-400' : 'hover:bg-slate-50',
         ].join(' ')}
         title={person.name}
@@ -126,7 +107,7 @@ function PhotoTile({
         </div>
         <span
           className={[
-            'truncate text-[11px] leading-tight',
+            'w-full truncate text-center text-[10px] leading-tight',
             active ? 'font-semibold text-indigo-700' : 'text-muted',
           ].join(' ')}
         >

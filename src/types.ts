@@ -40,7 +40,8 @@ export type LatestItem = {
 export type SubTeam = {
   id: string;
   title: string;
-  memberIds: string[];
+  managerId: string | null;
+  memberIds: string[]; // does NOT include managerId
   order: number;
 };
 

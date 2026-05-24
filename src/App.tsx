@@ -18,6 +18,7 @@ import { SubTeamsCanvas, UNASSIGNED_DROP_ID } from './components/SubTeamsCanvas'
 import { Backlog } from './components/Backlog';
 import { ExportImport } from './components/ExportImport';
 import { ThemePanel } from './components/ThemePanel';
+import { AdminDrawer } from './components/AdminDrawer';
 import { useStore } from './store';
 import { decodeChipDragId, decodeDropId } from './lib/dnd';
 import { CATEGORY_BY_ID } from './constants';
@@ -88,8 +89,13 @@ export default function App() {
         moveMemberToSubTeam(personId, null);
         return;
       }
-      if (overIdStr.startsWith('subteam:')) {
-        const subTeamId = overIdStr.slice('subteam:'.length);
+      if (overIdStr.startsWith('subteam-manager:')) {
+        const subTeamId = overIdStr.slice('subteam-manager:'.length);
+        useStore.getState().setSubTeamManager(subTeamId, personId);
+        return;
+      }
+      if (overIdStr.startsWith('subteam-members:')) {
+        const subTeamId = overIdStr.slice('subteam-members:'.length);
         moveMemberToSubTeam(personId, subTeamId);
       }
     }
@@ -106,6 +112,7 @@ export default function App() {
       onDragEnd={onDragEnd}
     >
       <ThemePanel />
+      <AdminDrawer />
       <ExportImport />
       <main>
         <Hero />

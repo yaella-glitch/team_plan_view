@@ -37,6 +37,7 @@ type Actions = {
   updateSubTeamTitle: (id: string, title: string) => void;
   removeSubTeam: (id: string) => void;
   moveMemberToSubTeam: (personId: string, subTeamId: string | null) => void;
+  setSubTeamManager: (subTeamId: string, personId: string | null) => void;
 
   // Bulk
   replaceState: (s: AppState) => void;
@@ -258,7 +259,13 @@ export const useStore = create<Store>()(
         set((state) => ({
           subTeams: [
             ...(state.subTeams ?? []),
-            { id, title, memberIds: [], order: (state.subTeams ?? []).length },
+            {
+              id,
+              title,
+              managerId: null,
+              memberIds: [],
+              order: (state.subTeams ?? []).length,
+            },
           ],
         }));
         return id;
@@ -272,12 +279,44 @@ export const useStore = create<Store>()(
       moveMemberToSubTeam: (personId, subTeamId) =>
         set((state) => ({
           subTeams: (state.subTeams ?? []).map((s) => {
+            const cleanedManager = s.managerId === personId ? null : s.managerId;
+            const cleanedMembers = s.memberIds.filter((m) => m !== personId);
             if (s.id === subTeamId) {
-              return s.memberIds.includes(personId)
-                ? s
-                : { ...s, memberIds: [...s.memberIds, personId] };
+              return {
+                ...s,
+                managerId: cleanedManager,
+                memberIds: [...cleanedMembers, personId],
+              };
             }
-            return { ...s, memberIds: s.memberIds.filter((m) => m !== personId) };
+            return { ...s, managerId: cleanedManager, memberIds: cleanedMembers };
+          }),
+        })),
+      setSubTeamManager: (subTeamId, personId) =>
+        set((state) => ({
+          subTeams: (state.subTeams ?? []).map((s) => {
+            // Remove personId from any other sub-team first.
+            const cleanedManager = s.managerId === personId ? null : s.managerId;
+            const cleanedMembers = s.memberIds.filter((m) => m !== personId);
+            if (s.id === subTeamId) {
+              // The previous manager (if any) is demoted to a member, unless we're clearing.
+              if (personId === null) {
+                const ex = s.managerId;
+                return {
+                  ...s,
+                  managerId: null,
+                  memberIds: ex
+                    ? [...cleanedMembers, ex].filter((id, i, arr) => arr.indexOf(id) === i)
+                    : cleanedMembers,
+                };
+              }
+              const ex = s.managerId && s.managerId !== personId ? s.managerId : null;
+              return {
+                ...s,
+                managerId: personId,
+                memberIds: ex ? [...cleanedMembers, ex] : cleanedMembers,
+              };
+            }
+            return { ...s, managerId: cleanedManager, memberIds: cleanedMembers };
           }),
         })),
 

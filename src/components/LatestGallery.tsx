@@ -8,32 +8,59 @@ export function LatestGallery() {
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-10">
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-ink">Latest things we did</h2>
-          <p className="mt-1 text-sm text-muted">A running gallery of recent launches, ships, wins.</p>
-        </div>
+      <div className="mb-5 flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-ink">Latest things we did</h2>
         <button
           type="button"
           onClick={() => addLatestItem()}
-          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm hover:opacity-90"
+          className="rounded-full border border-border bg-white px-2.5 py-1 text-sm text-muted shadow-sm hover:border-indigo-300 hover:text-indigo-700"
+          title="Add item"
         >
-          + Add item
+          +
         </button>
       </div>
 
       {items.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-white p-12 text-center text-sm italic text-muted">
-          Nothing here yet. Click "+ Add item" to add your first.
+        <div className="rounded-2xl border border-dashed border-border bg-white p-8 text-center text-sm italic text-muted">
+          Nothing here yet. Hit the + to add your first.
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <LatestCard key={item.id} item={item} />
-          ))}
-        </div>
+        <Marquee items={items} />
       )}
     </section>
+  );
+}
+
+/**
+ * A single-row horizontal strip that auto-scrolls left.
+ * - The list is duplicated so the loop seamlessly repeats.
+ * - Hovering the strip pauses the animation so users can read / click.
+ */
+function Marquee({ items }: { items: LatestItem[] }) {
+  // Duplicate the items so the keyframes can translate -50% without showing a gap.
+  const looped = [...items, ...items];
+
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-white py-3">
+      <div
+        className="flex w-max gap-3 px-3 animate-[marquee_40s_linear_infinite] group-hover:[animation-play-state:paused]"
+      >
+        {looped.map((item, i) => (
+          <LatestCard key={`${item.id}-${i}`} item={item} />
+        ))}
+      </div>
+
+      {/* Side fade gradients */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-white to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-white to-transparent" />
+
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(-50%, 0, 0); }
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -66,24 +93,21 @@ function LatestCard({ item }: { item: LatestItem }) {
   };
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-shadow hover:shadow-md">
+    <article className="group/card relative w-44 shrink-0 overflow-hidden rounded-xl border border-border bg-white shadow-sm transition-shadow hover:shadow-md">
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className="group relative block aspect-[16/10] w-full overflow-hidden bg-slate-50"
+        className="block aspect-[16/10] w-full overflow-hidden bg-slate-50"
       >
         {item.dataUrl ? (
           <img src={item.dataUrl} alt={item.title || 'Item'} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-2 border-2 border-dashed border-slate-200 text-muted">
-            <span className="text-3xl">🖼</span>
-            <span className="text-xs italic">Click to upload image</span>
-          </div>
+          <div className="flex h-full w-full items-center justify-center text-2xl text-slate-300">🖼</div>
         )}
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
 
-      <div className="p-3">
+      <div className="px-2 py-1.5">
         {editingTitle ? (
           <input
             autoFocus
@@ -97,15 +121,15 @@ function LatestCard({ item }: { item: LatestItem }) {
               if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
             }}
             placeholder="Title…"
-            className="w-full bg-transparent text-sm font-semibold text-ink outline-none border-b border-indigo-200"
+            className="w-full bg-transparent text-xs font-semibold text-ink outline-none border-b border-indigo-200"
           />
         ) : (
           <h3
-            className="cursor-text truncate text-sm font-semibold text-ink"
+            className="cursor-text truncate text-xs font-semibold text-ink"
             onDoubleClick={() => setEditingTitle(true)}
-            title="Double-click to edit title"
+            title="Double-click to edit"
           >
-            {item.title || <span className="italic text-muted">Add a title</span>}
+            {item.title || <span className="italic text-muted">Title</span>}
           </h3>
         )}
 
@@ -122,29 +146,28 @@ function LatestCard({ item }: { item: LatestItem }) {
               if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
             }}
             placeholder="https://…"
-            className="mt-1 w-full bg-transparent text-xs text-muted outline-none border-b border-indigo-200"
+            className="mt-0.5 w-full bg-transparent text-[10px] text-muted outline-none border-b border-indigo-200"
           />
         ) : item.link ? (
           <a
             href={item.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 block truncate text-xs text-indigo-600 hover:underline"
+            className="mt-0.5 block truncate text-[10px] text-indigo-600 hover:underline"
             onDoubleClick={(e) => {
               e.preventDefault();
               setEditingLink(true);
             }}
-            title="Open link · double-click to edit"
           >
-            {item.link}
+            {item.link.replace(/^https?:\/\//, '')}
           </a>
         ) : (
           <button
             type="button"
             onClick={() => setEditingLink(true)}
-            className="mt-1 truncate text-xs italic text-muted hover:text-ink"
+            className="mt-0.5 truncate text-[10px] italic text-muted hover:text-ink"
           >
-            + add a link
+            + link
           </button>
         )}
       </div>
@@ -155,7 +178,7 @@ function LatestCard({ item }: { item: LatestItem }) {
           if (confirm('Remove this item?')) removeLatestItem(item.id);
         }}
         title="Remove"
-        className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-xs text-muted opacity-0 shadow-sm transition-opacity hover:bg-rose-50 hover:text-rose-600 group-hover:opacity-100"
+        className="absolute right-1.5 top-1.5 rounded-full bg-white/90 px-1.5 py-0 text-xs text-muted opacity-0 shadow-sm hover:bg-rose-50 hover:text-rose-600 group-hover/card:opacity-100"
       >
         ×
       </button>
