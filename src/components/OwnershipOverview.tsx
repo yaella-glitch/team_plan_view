@@ -134,7 +134,7 @@ function PersonTile({
           {chips.length === 0 ? (
             <span className="text-[11px] italic text-muted">—</span>
           ) : (
-            chips.map((c) => <Chip key={c.id} chip={c} compact />)
+            chips.map((c) => <Chip key={c.id} chip={c} compact hidePrimary />)
           )}
           <button
             type="button"

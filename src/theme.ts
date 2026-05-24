@@ -45,7 +45,7 @@ export const useTheme = create<ThemeStore>()(
       applyPreset: (p) => set({ palette: p }),
       reset: () => set({ palette: DEFAULT_PALETTE }),
     }),
-    { name: 'team-plan-view-theme-v1' },
+    { name: 'team-plan-view-theme-v2' },
   ),
 );
 

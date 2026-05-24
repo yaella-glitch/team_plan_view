@@ -88,12 +88,7 @@ function Slide({
   image: AboutImage | null;
 }) {
   const setAboutImage = useStore((s) => s.setAboutImage);
-  const setAboutCaption = useStore((s) => s.setAboutCaption);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [captionDraft, setCaptionDraft] = useState(image?.caption ?? '');
-  const [editingCaption, setEditingCaption] = useState(false);
-
-  useEffect(() => setCaptionDraft(image?.caption ?? ''), [image?.caption, index]);
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -135,40 +130,6 @@ function Slide({
         </span>
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
-
-      <div className="flex items-center gap-2 border-t border-white/10 px-4 py-2.5">
-        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
-          {label}
-        </span>
-        {editingCaption ? (
-          <input
-            autoFocus
-            value={captionDraft}
-            onChange={(e) => setCaptionDraft(e.target.value)}
-            onBlur={() => {
-              setAboutCaption(index, captionDraft);
-              setEditingCaption(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-              else if (e.key === 'Escape') {
-                setCaptionDraft(image?.caption ?? '');
-                setEditingCaption(false);
-              }
-            }}
-            placeholder={`${label} caption…`}
-            className="flex-1 bg-transparent text-sm text-ink outline-none border-b border-accent/40"
-          />
-        ) : (
-          <span
-            className="flex-1 cursor-text truncate text-sm text-ink"
-            onDoubleClick={() => setEditingCaption(true)}
-            title="Double-click to edit caption"
-          >
-            {image?.caption || <span className="italic text-muted">Add a caption</span>}
-          </span>
-        )}
-      </div>
       </div>
     </div>
   );

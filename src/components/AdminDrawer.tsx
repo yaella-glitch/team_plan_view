@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store';
 import { resolvePhotoUrl } from '../lib/photo';
+import { AddOwnershipModal } from './Backlog';
 
 export function AdminDrawer() {
   const [open, setOpen] = useState(false);
@@ -10,7 +11,7 @@ export function AdminDrawer() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed right-4 top-14 z-30 flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur hover:bg-white/10"
+        className="fixed right-4 top-4 z-30 flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur hover:bg-white/10"
         title="Open admin panel"
       >
         ⚙ Admin
@@ -45,6 +46,7 @@ function Drawer({ onClose }: { onClose: () => void }) {
         </header>
 
         <div className="flex-1 overflow-y-auto p-5">
+          <QuickAddSection />
           <PMMsSection />
           <AboutSection />
           <LatestSection />
@@ -57,6 +59,52 @@ function Drawer({ onClose }: { onClose: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
+
+function QuickAddSection() {
+  const addPerson = useStore((s) => s.addPerson);
+  const addChip = useStore((s) => s.addChip);
+  const [openOwnership, setOpenOwnership] = useState(false);
+
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Quick add" />
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => {
+            const name = prompt('New PMM name?');
+            if (name && name.trim()) addPerson(name.trim());
+          }}
+          className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:bg-white/[0.06]"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xl">👤</span>
+            <span>+ Add PMM</span>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpenOwnership(true)}
+          className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:bg-white/[0.06]"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🧩</span>
+            <span>+ Add ownership area</span>
+          </div>
+        </button>
+      </div>
+      {openOwnership && (
+        <AddOwnershipModal
+          onClose={() => setOpenOwnership(false)}
+          onAdd={(cat, label) => {
+            addChip(cat, null, label);
+            setOpenOwnership(false);
+          }}
+        />
+      )}
+    </section>
+  );
+}
 
 function PMMsSection() {
   const people = useStore((s) => s.people);

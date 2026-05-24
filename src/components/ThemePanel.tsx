@@ -23,7 +23,7 @@ export function ThemePanel() {
   }, [palette]);
 
   return (
-    <div className="fixed left-4 top-4 z-30">
+    <div className="fixed right-4 top-14 z-30">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -36,7 +36,7 @@ export function ThemePanel() {
 
       {open && (
         <div
-          className="mt-2 w-72 rounded-2xl border border-white/10 p-4 shadow-xl"
+          className="absolute right-0 mt-2 w-72 rounded-2xl border border-white/10 p-4 shadow-xl"
           style={{ background: 'rgb(var(--surface))' }}
         >
           <div className="mb-3 flex items-center justify-between">

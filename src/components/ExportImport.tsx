@@ -41,7 +41,7 @@ export function ExportImport() {
   };
 
   return (
-    <div className="fixed right-4 top-4 z-30 flex gap-1 rounded-full border border-white/15 bg-white/[0.06] px-2 py-1 shadow-sm backdrop-blur">
+    <div className="fixed right-4 top-[5.75rem] z-30 flex gap-1 rounded-full border border-white/15 bg-white/[0.06] px-2 py-1 shadow-sm backdrop-blur">
       <button
         type="button"
         onClick={onExport}

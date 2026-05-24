@@ -9,7 +9,7 @@ export function LatestGallery() {
   return (
     <section className="mx-auto max-w-7xl px-8 py-10">
       <div className="mb-5 flex items-center gap-3">
-        <h2 className="text-2xl font-bold text-ink">Latest things we did</h2>
+        <h2 className="text-2xl font-bold text-ink">Our latest highlights</h2>
         <button
           type="button"
           onClick={() => addLatestItem()}
@@ -42,9 +42,7 @@ function Marquee({ items }: { items: LatestItem[] }) {
 
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] py-3">
-      <div
-        className="flex w-max gap-3 px-3 animate-[marquee_40s_linear_infinite] group-hover:[animation-play-state:paused]"
-      >
+      <div className="flex w-max gap-3 animate-[marquee_40s_linear_infinite] group-hover:[animation-play-state:paused]">
         {looped.map((item, i) => (
           <LatestCard key={`${item.id}-${i}`} item={item} />
         ))}
@@ -61,9 +59,12 @@ function Marquee({ items }: { items: LatestItem[] }) {
       />
 
       <style>{`
+        /* The track contains N items repeated twice with a uniform 12px gap throughout.
+           A perfect seamless loop translates by exactly one repeat-cycle =
+           one copy width + one gap. That equals 50% of the total + 6px (half a gap). */
         @keyframes marquee {
-          0% { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(-50%, 0, 0); }
+          0%   { transform: translate3d(0, 0, 0); }
+          100% { transform: translate3d(calc(-50% - 6px), 0, 0); }
         }
       `}</style>
     </div>

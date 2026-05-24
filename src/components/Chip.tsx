@@ -8,11 +8,14 @@ import { chipDragId } from '../lib/dnd';
 
 type Props = {
   chip: ChipValue;
-  /** When true, render compact (used in topic-item rows). Default false (card chip). */
+  /** When true, render compact. Default false (card chip). */
   compact?: boolean;
+  /** When true, suppress the primary-star button and the bold/ring treatment.
+   *  Used in Ownership overview where chips should look equal. */
+  hidePrimary?: boolean;
 };
 
-export function Chip({ chip, compact = false }: Props) {
+export function Chip({ chip, compact = false, hidePrimary = false }: Props) {
   const meta = CATEGORY_BY_ID[chip.category];
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: chipDragId(chip.id),
@@ -55,19 +58,21 @@ export function Chip({ chip, compact = false }: Props) {
         'group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs',
         meta.tint,
         meta.border,
-        chip.isPrimary ? 'font-semibold ring-1 ring-white/30' : '',
+        chip.isPrimary && !hidePrimary ? 'font-semibold ring-1 ring-white/30' : '',
         compact ? 'text-[11px] px-2 py-0.5' : '',
         'select-none',
       ].join(' ')}
     >
-      <button
-        type="button"
-        onClick={() => toggleChipPrimary(chip.id)}
-        title={chip.isPrimary ? 'Primary (click to unmark)' : 'Mark as primary'}
-        className="opacity-60 hover:opacity-100"
-      >
-        {chip.isPrimary ? '★' : '☆'}
-      </button>
+      {!hidePrimary && (
+        <button
+          type="button"
+          onClick={() => toggleChipPrimary(chip.id)}
+          title={chip.isPrimary ? 'Primary (click to unmark)' : 'Mark as primary'}
+          className="opacity-60 hover:opacity-100"
+        >
+          {chip.isPrimary ? '★' : '☆'}
+        </button>
+      )}
 
       {editing ? (
         <input
