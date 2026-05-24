@@ -4,25 +4,14 @@ import type { LatestItem } from '../types';
 
 export function LatestGallery() {
   const items = useStore((s) => s.latest ?? []);
-  const addLatestItem = useStore((s) => s.addLatestItem);
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-10">
-      <div className="mb-5 flex items-center gap-3">
-        <h2 className="text-2xl font-bold text-ink">Our latest highlights</h2>
-        <button
-          type="button"
-          onClick={() => addLatestItem()}
-          className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-sm text-muted hover:border-accent/60 hover:text-ink"
-          title="Add item"
-        >
-          +
-        </button>
-      </div>
+      <h2 className="mb-5 text-2xl font-bold text-ink">Our latest highlights</h2>
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-8 text-center text-sm italic text-muted">
-          Nothing here yet. Hit the + to add your first.
+          Nothing here yet. Add an item from the Admin panel (Quick add).
         </div>
       ) : (
         <Marquee items={items} />
@@ -31,18 +20,44 @@ export function LatestGallery() {
   );
 }
 
+const CARD_WIDTH = 176; // tailwind w-44 = 11rem = 176px
+const GAP = 12;          // gap-3
+
 /**
  * A single-row horizontal strip that auto-scrolls left.
- * - The list is duplicated so the loop seamlessly repeats.
- * - Hovering the strip pauses the animation so users can read / click.
+ *
+ * Key insight: we render the items enough times so the track is always at
+ * least ~2x viewport wide. Then we animate the track by exactly *one cycle*
+ * (one copy of the items + one gap) in pixels — so the loop visually repeats
+ * to a position identical to where it started, regardless of viewport width
+ * or how many items the user has added.
+ *
+ * Hovering pauses the animation.
  */
 function Marquee({ items }: { items: LatestItem[] }) {
-  // Duplicate the items so the keyframes can translate -50% without showing a gap.
-  const looped = [...items, ...items];
+  const N = items.length;
+  const cycleWidth = N * CARD_WIDTH + N * GAP; // one copy + one trailing gap
+  // Make sure the rendered track is at least 2x the widest expected viewport
+  // so we never see empty space on the right at any phase of the animation.
+  const minCopies = Math.max(2, Math.ceil((2 * 2400) / cycleWidth));
+  const copies = Math.min(minCopies, 12);
+  const looped = Array.from({ length: copies }, () => items).flat();
+  // Pick a duration proportional to cycle width so visual speed is constant.
+  const pxPerSecond = 60;
+  const durationSec = Math.max(20, Math.round(cycleWidth / pxPerSecond));
 
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] py-3">
-      <div className="flex w-max gap-3 animate-[marquee_40s_linear_infinite] group-hover:[animation-play-state:paused]">
+      <div
+        className="flex w-max animate-[marquee_var(--marquee-duration)_linear_infinite] group-hover:[animation-play-state:paused]"
+        style={
+          {
+            gap: `${GAP}px`,
+            '--marquee-duration': `${durationSec}s`,
+            '--marquee-cycle': `${cycleWidth}px`,
+          } as React.CSSProperties
+        }
+      >
         {looped.map((item, i) => (
           <LatestCard key={`${item.id}-${i}`} item={item} />
         ))}
@@ -59,12 +74,9 @@ function Marquee({ items }: { items: LatestItem[] }) {
       />
 
       <style>{`
-        /* The track contains N items repeated twice with a uniform 12px gap throughout.
-           A perfect seamless loop translates by exactly one repeat-cycle =
-           one copy width + one gap. That equals 50% of the total + 6px (half a gap). */
         @keyframes marquee {
           0%   { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(calc(-50% - 6px), 0, 0); }
+          100% { transform: translate3d(calc(-1 * var(--marquee-cycle)), 0, 0); }
         }
       `}</style>
     </div>

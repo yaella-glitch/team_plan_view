@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { resolvePhotoUrl } from '../lib/photo';
 import { AddOwnershipModal } from './Backlog';
+import { useTheme, DEFAULT_PALETTE, MONDAY_PALETTE, type Palette } from '../theme';
+import type { AppState } from '../types';
 
 export function AdminDrawer() {
   const [open, setOpen] = useState(false);
@@ -51,6 +53,8 @@ function Drawer({ onClose }: { onClose: () => void }) {
           <AboutSection />
           <LatestSection />
           <SubTeamsSection />
+          <ThemeSection />
+          <DataSection />
           <DangerZone />
         </div>
       </aside>
@@ -312,6 +316,181 @@ function SubTeamsSection() {
           ))}
         </ul>
       )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+const THEME_LABELS: { key: keyof Palette; label: string; hint: string }[] = [
+  { key: 'accent', label: 'Accent', hint: 'Buttons, highlights, active states' },
+  { key: 'canvas', label: 'Canvas', hint: 'Page background' },
+  { key: 'surface', label: 'Surface', hint: 'Card background' },
+  { key: 'ink', label: 'Ink', hint: 'Primary text' },
+  { key: 'muted', label: 'Muted', hint: 'Secondary text' },
+  { key: 'border', label: 'Border', hint: 'Dividers, outlines' },
+];
+
+function ThemeSection() {
+  const palette = useTheme((s) => s.palette);
+  const setColor = useTheme((s) => s.setColor);
+  const applyPreset = useTheme((s) => s.applyPreset);
+  const reset = useTheme((s) => s.reset);
+
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Theme" />
+
+      <div className="mb-3 flex gap-1.5">
+        <PresetBtn label="Dark default" onClick={() => applyPreset(DEFAULT_PALETTE)} />
+        <PresetBtn label="monday light" onClick={() => applyPreset(MONDAY_PALETTE)} />
+        <PresetBtn label="Reset" onClick={reset} />
+      </div>
+
+      <div className="space-y-2">
+        {THEME_LABELS.map(({ key, label, hint }) => (
+          <ColorRow
+            key={key}
+            label={label}
+            hint={hint}
+            value={palette[key]}
+            onChange={(hex) => setColor(key, hex)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PresetBtn({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-xs text-ink hover:border-accent/60"
+    >
+      {label}
+    </button>
+  );
+}
+
+function ColorRow({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: string;
+  onChange: (hex: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+
+  const commit = () => {
+    const v = draft.trim();
+    if (/^#?[0-9a-f]{6}$/i.test(v) || /^#?[0-9a-f]{3}$/i.test(v)) {
+      onChange(v.startsWith('#') ? v : `#${v}`);
+    } else {
+      setDraft(value);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8 w-8 cursor-pointer rounded border border-white/15"
+        aria-label={`${label} color picker`}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-ink">{label}</span>
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+            }}
+            className="ml-auto w-20 rounded border border-white/15 bg-white/[0.04] px-1.5 py-0.5 text-[11px] font-mono text-ink focus:border-accent/60 focus:outline-none"
+          />
+        </div>
+        <p className="text-[11px] text-muted">{hint}</p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function DataSection() {
+  const exported = useStore((s) => ({
+    people: s.people,
+    chips: s.chips,
+    activeTopicTab: s.activeTopicTab,
+    about: s.about,
+    latest: s.latest,
+    subTeams: s.subTeams,
+  }));
+  const replaceState = useStore((s) => s.replaceState);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onExport = () => {
+    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `team-plan-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try {
+      const text = await f.text();
+      const parsed = JSON.parse(text) as AppState;
+      if (!Array.isArray(parsed.people) || !Array.isArray(parsed.chips)) {
+        alert('Invalid file format.');
+        return;
+      }
+      replaceState(parsed);
+    } catch (err) {
+      alert(`Failed to import: ${(err as Error).message}`);
+    } finally {
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Data" />
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onExport}
+          className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
+        >
+          ↓ Export JSON
+        </button>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
+        >
+          ↑ Import JSON
+        </button>
+        <input ref={fileRef} type="file" accept="application/json" onChange={onImport} className="hidden" />
+      </div>
+      <p className="mt-2 text-[11px] text-muted">
+        Export the current plan to share or back up. Import replaces the current plan with the JSON's contents.
+      </p>
     </section>
   );
 }

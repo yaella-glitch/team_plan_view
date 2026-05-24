@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -16,9 +16,8 @@ import { OwnershipOverview } from './components/OwnershipOverview';
 import { CardsCanvas } from './components/CardsCanvas';
 import { SubTeamsCanvas, UNASSIGNED_DROP_ID } from './components/SubTeamsCanvas';
 import { Backlog } from './components/Backlog';
-import { ExportImport } from './components/ExportImport';
-import { ThemePanel } from './components/ThemePanel';
 import { AdminDrawer } from './components/AdminDrawer';
+import { applyPaletteToCss, useTheme } from './theme';
 import { useStore } from './store';
 import { decodeChipDragId, decodeDropId } from './lib/dnd';
 import { CATEGORY_BY_ID } from './constants';
@@ -29,8 +28,14 @@ export default function App() {
   const moveMemberToSubTeam = useStore((s) => s.moveMemberToSubTeam);
   const chips = useStore((s) => s.chips);
   const people = useStore((s) => s.people);
+  const palette = useTheme((s) => s.palette);
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
+
+  // Apply the (possibly-customized) palette to CSS variables on mount and whenever it changes.
+  useEffect(() => {
+    applyPaletteToCss(palette);
+  }, [palette]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -111,9 +116,7 @@ export default function App() {
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
-      <ThemePanel />
       <AdminDrawer />
-      <ExportImport />
       <main>
         <Hero />
         <About />
