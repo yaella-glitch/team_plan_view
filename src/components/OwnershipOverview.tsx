@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { useStore } from '../store';
@@ -85,6 +86,7 @@ function MiniCard({
   const dropId = encodeSection(person.id, category);
   const { setNodeRef, isOver } = useDroppable({ id: dropId, data: { ownerId: person.id, category } });
   const photo = resolvePhotoUrl(person.photoUrl);
+  const [imgFailed, setImgFailed] = useState(false);
 
   return (
     <div
@@ -96,16 +98,22 @@ function MiniCard({
     >
       {/* Square photo */}
       <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
-        {photo ? (
+        {photo && !imgFailed ? (
           <img
             src={photo}
             alt={person.name}
             className="h-full w-full object-cover"
-            onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
+            onError={() => setImgFailed(true)}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-slate-400">
-            {initials(person.name)}
+          <div
+            className={[
+              'flex h-full w-full items-center justify-center text-3xl font-bold',
+              imgFailed ? 'bg-rose-50 text-rose-400' : 'text-slate-400',
+            ].join(' ')}
+            title={imgFailed ? `Photo not found: ${person.photoUrl}` : ''}
+          >
+            {imgFailed ? '!' : initials(person.name)}
           </div>
         )}
       </div>

@@ -15,7 +15,10 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
   const [draft, setDraft] = useState(person.photoUrl);
   const ref = useRef<HTMLDivElement>(null);
 
+  const [imgFailed, setImgFailed] = useState(false);
+
   useEffect(() => setDraft(person.photoUrl), [person.photoUrl]);
+  useEffect(() => setImgFailed(false), [person.photoUrl]);
 
   // Close on outside click
   useEffect(() => {
@@ -60,23 +63,24 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
         className="group block rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
         title="Click to change photo"
       >
-        {resolved ? (
+        {resolved && !imgFailed ? (
           <img
             src={resolved}
             alt={person.name}
             style={{ height: size, width: size }}
             className="rounded-full border-2 border-white object-cover shadow-sm ring-2 ring-slate-100 group-hover:ring-indigo-200"
-            onError={(e) => {
-              // If filename is wrong, show the fallback initial circle.
-              (e.currentTarget as HTMLImageElement).style.display = 'none';
-            }}
+            onError={() => setImgFailed(true)}
           />
         ) : (
           <div
             style={{ height: size, width: size }}
-            className="flex items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600 ring-2 ring-slate-100"
+            className={[
+              'flex items-center justify-center rounded-full text-sm font-semibold ring-2 ring-slate-100',
+              imgFailed ? 'bg-rose-100 text-rose-600' : 'bg-slate-200 text-slate-600',
+            ].join(' ')}
+            title={imgFailed ? `Photo not found: ${person.photoUrl}` : ''}
           >
-            {initials(person.name)}
+            {imgFailed ? '!' : initials(person.name)}
           </div>
         )}
       </button>
