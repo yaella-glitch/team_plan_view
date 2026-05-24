@@ -33,3 +33,4 @@ pnpm-debug.log*
 
 # claude local settings
 .claude/settings.local.json
+dist/
