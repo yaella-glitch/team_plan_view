@@ -93,11 +93,19 @@ export default function App() {
 
     // CASE 2: person reorder drag (in Ownership view or Full card sidebar)
     if (activeIdStr.startsWith('person:')) {
+      const fromId = activeIdStr.slice('person:'.length);
+      // Destination might be another sortable photo ('person:<id>') OR the
+      // PersonTile's chip-drop wrapper ('section:<personId>:<category>') —
+      // both refs sit on the same DOM node, so collision detection can pick
+      // either. Extract the target person id from whichever form we got.
+      let toId: string | null = null;
       if (overIdStr.startsWith('person:')) {
-        const fromId = activeIdStr.slice('person:'.length);
-        const toId = overIdStr.slice('person:'.length);
-        if (fromId !== toId) reorderPerson(fromId, toId);
+        toId = overIdStr.slice('person:'.length);
+      } else if (overIdStr.startsWith('section:')) {
+        const parts = overIdStr.split(':');
+        if (parts.length >= 2 && parts[1] !== 'null') toId = parts[1];
       }
+      if (toId && fromId !== toId) reorderPerson(fromId, toId);
       return;
     }
 
