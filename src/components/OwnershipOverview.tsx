@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useStore, selectVisiblePeople } from '../store';
 import { CATEGORIES, CATEGORY_BY_ID } from '../constants';
 import type { Category, ChipValue, Person } from '../types';
 import { encodeSection, chipDragId } from '../lib/dnd';
 import { Chip } from './Chip';
 import { resolvePhotoUrl } from '../lib/photo';
+
+const personDragId = (id: string) => `person:${id}`;
 
 /**
  * Per-category color treatment for the active tab.
@@ -62,18 +65,20 @@ export function OwnershipOverview() {
         </div>
 
         {/* Grid of PMM tiles — each tile lays out photo + name + chips horizontally */}
-        <div className="grid grid-cols-1 gap-x-6 gap-y-3 pt-2 sm:grid-cols-2 xl:grid-cols-3">
-          {people.map((p) => (
-            <PersonTile
-              key={p.id}
-              person={p}
-              category={activeTab}
-              chips={chips
-                .filter((c) => c.ownerId === p.id && c.category === activeTab)
-                .sort((a, b) => a.order - b.order)}
-            />
-          ))}
-        </div>
+        <SortableContext items={people.map((p) => personDragId(p.id))} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-1 gap-x-6 gap-y-3 pt-2 sm:grid-cols-2 xl:grid-cols-3">
+            {people.map((p) => (
+              <PersonTile
+                key={p.id}
+                person={p}
+                category={activeTab}
+                chips={chips
+                  .filter((c) => c.ownerId === p.id && c.category === activeTab)
+                  .sort((a, b) => a.order - b.order)}
+              />
+            ))}
+          </div>
+        </SortableContext>
         </div>
       </div>
     </section>
@@ -91,27 +96,42 @@ function PersonTile({
 }) {
   const addChip = useStore((s) => s.addChip);
   const dropId = encodeSection(person.id, category);
-  const { setNodeRef, isOver } = useDroppable({ id: dropId, data: { ownerId: person.id, category } });
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: dropId, data: { ownerId: person.id, category } });
+  const sortable = useSortable({ id: personDragId(person.id), data: { personId: person.id, kind: 'person-reorder' } });
   const photo = resolvePhotoUrl(person.photoUrl);
   const [imgFailed, setImgFailed] = useState(false);
   const meta = CATEGORY_BY_ID[category];
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setDropRef(node);
+        sortable.setNodeRef(node);
+      }}
+      style={{
+        transform: CSS.Transform.toString(sortable.transform),
+        transition: sortable.transition,
+        opacity: sortable.isDragging ? 0.4 : 1,
+      }}
       className={[
         'flex items-center gap-3 rounded-2xl p-2 transition-colors',
         isOver ? 'bg-accent/10 ring-2 ring-accent/40' : '',
       ].join(' ')}
     >
-      {/* Photo */}
-      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full ring-2 ring-white/10">
+      {/* Photo — drag handle for reordering */}
+      <div
+        className="h-12 w-12 shrink-0 cursor-grab overflow-hidden rounded-full ring-2 ring-white/10 active:cursor-grabbing"
+        title="Drag to reorder"
+        {...sortable.attributes}
+        {...sortable.listeners}
+      >
         {photo && !imgFailed ? (
           <img
             src={photo}
             alt={person.name}
             className="h-full w-full object-cover"
             onError={() => setImgFailed(true)}
+            draggable={false}
           />
         ) : (
           <div

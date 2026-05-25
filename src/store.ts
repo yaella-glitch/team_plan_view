@@ -20,6 +20,7 @@ type Actions = {
   hideCategoryForPerson: (personId: string, category: Category) => void;
   showCategoryForPerson: (personId: string, category: Category) => void;
   togglePersonEnabled: (id: string) => void;
+  reorderPerson: (personId: string, targetPersonId: string) => void;
 
   // Topic tab
   setActiveTopicTab: (cat: Category) => void;
@@ -229,6 +230,22 @@ export const useStore = create<Store>()(
           ),
         })),
 
+      reorderPerson: (personId, targetPersonId) =>
+        set((state) => {
+          if (personId === targetPersonId) return {};
+          const sorted = [...state.people].sort((a, b) => a.order - b.order);
+          const fromIdx = sorted.findIndex((p) => p.id === personId);
+          const toIdx = sorted.findIndex((p) => p.id === targetPersonId);
+          if (fromIdx < 0 || toIdx < 0) return {};
+          const [moved] = sorted.splice(fromIdx, 1);
+          sorted.splice(toIdx, 0, moved);
+          // Re-number the order field on every person.
+          const idToOrder = new Map(sorted.map((p, i) => [p.id, i]));
+          return {
+            people: state.people.map((p) => ({ ...p, order: idToOrder.get(p.id) ?? p.order })),
+          };
+        }),
+
       setActiveTopicTab: (cat) => set({ activeTopicTab: cat }),
 
       // About
@@ -340,9 +357,9 @@ export const useStore = create<Store>()(
 
 // --- Selectors ----------------------------------------------------------------
 
-/** Visible (enabled) people only — used by all display views. */
+/** Visible (enabled) people, sorted by their display order. */
 export function selectVisiblePeople(state: AppState): Person[] {
-  return state.people.filter((p) => p.enabled !== false);
+  return state.people.filter((p) => p.enabled !== false).sort((a, b) => a.order - b.order);
 }
 
 export function selectChipsFor(state: AppState, ownerId: string | null, category: Category): ChipValue[] {

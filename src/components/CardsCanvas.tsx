@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useStore, selectVisiblePeople } from '../store';
 import { PersonCard } from './PersonCard';
 import { resolvePhotoUrl } from '../lib/photo';
 import type { Person } from '../types';
+
+const personDragId = (id: string) => `person:${id}`;
 
 export function CardsCanvas() {
   const people = useStore(selectVisiblePeople);
@@ -29,16 +33,21 @@ export function CardsCanvas() {
         {/* Left strip: ~15% photo carousel */}
         <aside className="w-[88px] shrink-0">
           <div className="sticky top-4 max-h-[80vh] overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 shadow-sm backdrop-blur">
-            <ul className="flex flex-col gap-1.5">
-              {people.map((p) => (
-                <PhotoTile
-                  key={p.id}
-                  person={p}
-                  active={p.id === selectedId}
-                  onSelect={() => setSelectedId(p.id)}
-                />
-              ))}
-            </ul>
+            <SortableContext
+              items={people.map((p) => personDragId(p.id))}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="flex flex-col gap-1.5">
+                {people.map((p) => (
+                  <PhotoTile
+                    key={p.id}
+                    person={p}
+                    active={p.id === selectedId}
+                    onSelect={() => setSelectedId(p.id)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
           </div>
         </aside>
 
@@ -69,9 +78,20 @@ function PhotoTile({
   const photo = resolvePhotoUrl(person.photoUrl);
   const [imgFailed, setImgFailed] = useState(false);
   useEffect(() => setImgFailed(false), [person.photoUrl]);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: personDragId(person.id),
+    data: { personId: person.id, kind: 'person-reorder' },
+  });
 
   return (
-    <li>
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+    >
       <button
         type="button"
         onClick={onSelect}
@@ -79,7 +99,9 @@ function PhotoTile({
           'group flex w-full flex-col items-center gap-1 rounded-lg p-1 transition-all',
           active ? 'bg-accent/15 ring-2 ring-accent/60' : 'hover:bg-white/5',
         ].join(' ')}
-        title={person.name}
+        title={`${person.name} — drag to reorder`}
+        {...attributes}
+        {...listeners}
       >
         <div
           className={[

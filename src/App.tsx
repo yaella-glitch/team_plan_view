@@ -26,11 +26,13 @@ import { resolvePhotoUrl } from './lib/photo';
 export default function App() {
   const moveChip = useStore((s) => s.moveChip);
   const moveMemberToSubTeam = useStore((s) => s.moveMemberToSubTeam);
+  const reorderPerson = useStore((s) => s.reorderPerson);
   const chips = useStore((s) => s.chips);
   const people = useStore((s) => s.people);
   const palette = useTheme((s) => s.palette);
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
+  const [activePersonId, setActivePersonId] = useState<string | null>(null);
 
   // Apply the (possibly-customized) palette to CSS variables on mount and whenever it changes.
   useEffect(() => {
@@ -46,12 +48,15 @@ export default function App() {
     } else if (idStr.startsWith('member:')) {
       const personId = e.active.data.current?.personId as string | undefined;
       if (personId) setActiveMemberId(personId);
+    } else if (idStr.startsWith('person:')) {
+      setActivePersonId(idStr.slice('person:'.length));
     }
   };
 
   const onDragEnd = (e: DragEndEvent) => {
     setActiveChipId(null);
     setActiveMemberId(null);
+    setActivePersonId(null);
     if (!e.over) return;
     const activeIdStr = String(e.active.id);
     const overIdStr = String(e.over.id);
@@ -86,7 +91,17 @@ export default function App() {
       return;
     }
 
-    // CASE 2: sub-team member drag
+    // CASE 2: person reorder drag (in Ownership view or Full card sidebar)
+    if (activeIdStr.startsWith('person:')) {
+      if (overIdStr.startsWith('person:')) {
+        const fromId = activeIdStr.slice('person:'.length);
+        const toId = overIdStr.slice('person:'.length);
+        if (fromId !== toId) reorderPerson(fromId, toId);
+      }
+      return;
+    }
+
+    // CASE 3: sub-team member drag
     if (activeIdStr.startsWith('member:')) {
       const personId = e.active.data.current?.personId as string | undefined;
       if (!personId) return;
@@ -108,6 +123,7 @@ export default function App() {
 
   const activeChip = activeChipId ? chips.find((c) => c.id === activeChipId) : null;
   const activeMember = activeMemberId ? people.find((p) => p.id === activeMemberId) : null;
+  const activePerson = activePersonId ? people.find((p) => p.id === activePersonId) : null;
 
   return (
     <DndContext
@@ -145,6 +161,14 @@ export default function App() {
               alt=""
             />
             <span className="text-xs font-medium">{activeMember.name}</span>
+          </div>
+        ) : activePerson ? (
+          <div className="h-14 w-14 overflow-hidden rounded-full shadow-2xl ring-2 ring-accent">
+            <img
+              src={resolvePhotoUrl(activePerson.photoUrl)}
+              className="h-full w-full object-cover"
+              alt=""
+            />
           </div>
         ) : null}
       </DragOverlay>
