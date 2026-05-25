@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import type { LatestItem } from '../types';
+import { compressImage } from '../lib/image';
 
 export function LatestGallery() {
   const items = useStore((s) => s.latest ?? []);
@@ -98,17 +99,14 @@ function LatestCard({ item }: { item: LatestItem }) {
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 3_000_000) {
-      const ok = confirm('Image is larger than 3MB. Continue?');
-      if (!ok) {
-        e.target.value = '';
-        return;
-      }
+    try {
+      const dataUrl = await compressImage(file, { maxWidth: 1000, quality: 0.8 });
+      updateLatestItem(item.id, { dataUrl });
+    } catch (err) {
+      alert(`Failed to load image: ${(err as Error).message}`);
+    } finally {
+      e.target.value = '';
     }
-    const reader = new FileReader();
-    reader.onload = () => updateLatestItem(item.id, { dataUrl: String(reader.result || '') });
-    reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
   return (

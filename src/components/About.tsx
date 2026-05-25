@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import type { AboutImage } from '../types';
+import { compressImage } from '../lib/image';
 
 const SLOTS = [
   { label: 'Win', placeholder: 'Drop a screenshot of a team win' },
@@ -93,19 +94,14 @@ function Slide({
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 3_000_000) {
-      const ok = confirm('Image is larger than 3MB. Continue?');
-      if (!ok) {
-        e.target.value = '';
-        return;
-      }
+    try {
+      const dataUrl = await compressImage(file, { maxWidth: 1600, quality: 0.85 });
+      setAboutImage(index, { dataUrl, caption: image?.caption });
+    } catch (err) {
+      alert(`Failed to load image: ${(err as Error).message}`);
+    } finally {
+      e.target.value = '';
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setAboutImage(index, { dataUrl: String(reader.result || ''), caption: image?.caption });
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
   return (

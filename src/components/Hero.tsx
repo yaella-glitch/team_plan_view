@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { compressImage } from '../lib/image';
 
 const HERO_IMAGE_KEY = 'team-plan-view-hero-image-v1';
 
@@ -26,14 +27,15 @@ export function Hero() {
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = String(reader.result || '');
+    try {
+      const url = await compressImage(file, { maxWidth: 1200, quality: 0.85 });
       setHeroImage(url);
       saveHeroImage(url);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+    } catch (err) {
+      alert(`Failed to load image: ${(err as Error).message}`);
+    } finally {
+      e.target.value = '';
+    }
   };
 
   return (

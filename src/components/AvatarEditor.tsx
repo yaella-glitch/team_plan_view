@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { resolvePhotoUrl } from '../lib/photo';
+import { compressImage } from '../lib/image';
 import { useStore } from '../store';
 import type { Person } from '../types';
 
@@ -52,17 +53,16 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
   const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2_000_000) {
-      alert('Image is large (>2MB). For best results pick a smaller one.');
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || '');
+    try {
+      const dataUrl = await compressImage(file, { maxWidth: 400, quality: 0.85 });
       updatePerson(person.id, { photoUrl: dataUrl });
       setDraft(dataUrl);
       setOpen(false);
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      alert(`Failed to load image: ${(err as Error).message}`);
+    } finally {
+      e.target.value = '';
+    }
   };
 
   const resolved = resolvePhotoUrl(person.photoUrl);
