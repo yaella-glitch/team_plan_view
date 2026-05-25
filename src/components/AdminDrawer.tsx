@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
-import { resolvePhotoUrl } from '../lib/photo';
 import { AddOwnershipModal } from './Backlog';
 import { useTheme, DEFAULT_PALETTE, MONDAY_PALETTE, type Palette } from '../theme';
-import type { AppState } from '../types';
+import { AvatarEditor } from './AvatarEditor';
+import type { AppState, Person } from '../types';
 
 export function AdminDrawer() {
   const [open, setOpen] = useState(false);
@@ -134,37 +134,100 @@ function PMMsSection() {
       />
 
       <ul className="space-y-1.5">
-        {people.map((p) => {
-          const photo = resolvePhotoUrl(p.photoUrl);
-          return (
-            <li key={p.id} className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5">
-              <div className="h-7 w-7 overflow-hidden rounded-full bg-white/5">
-                {photo ? (
-                  <img src={photo} alt={p.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-muted">
-                    {initials(p.name)}
-                  </div>
-                )}
-              </div>
-              <span className="flex-1 truncate text-sm text-ink">{p.name}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm(`Remove ${p.name} from the team? Their assigned chips will move to the backlog.`)) {
-                    removePerson(p.id);
-                  }
-                }}
-                className="rounded-full px-1.5 py-0 text-xs text-muted hover:bg-rose-50 hover:text-rose-600"
-                title={`Remove ${p.name}`}
-              >
-                ×
-              </button>
-            </li>
-          );
-        })}
+        {people.map((p) => (
+          <PmmAdminRow key={p.id} person={p} onRemove={() => removePerson(p.id)} />
+        ))}
       </ul>
     </section>
+  );
+}
+
+function PmmAdminRow({ person, onRemove }: { person: Person; onRemove: () => void }) {
+  const updatePerson = useStore((s) => s.updatePerson);
+  const togglePersonEnabled = useStore((s) => s.togglePersonEnabled);
+  const [editingName, setEditingName] = useState(false);
+  const [draft, setDraft] = useState(person.name);
+
+  useEffect(() => setDraft(person.name), [person.name]);
+  const enabled = person.enabled !== false;
+
+  return (
+    <li
+      className={[
+        'flex items-center gap-2 rounded-lg border bg-white/[0.03] px-2 py-1.5',
+        enabled ? 'border-white/10' : 'border-white/5 opacity-50',
+      ].join(' ')}
+    >
+      <AvatarEditor person={person} size={28} />
+      {editingName ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            if (draft.trim()) updatePerson(person.id, { name: draft.trim() });
+            else setDraft(person.name);
+            setEditingName(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+            else if (e.key === 'Escape') {
+              setDraft(person.name);
+              setEditingName(false);
+            }
+          }}
+          className="flex-1 bg-transparent text-sm text-ink outline-none border-b border-accent/40"
+        />
+      ) : (
+        <span
+          className="flex-1 cursor-text truncate text-sm text-ink"
+          onDoubleClick={() => setEditingName(true)}
+          title="Double-click to rename"
+        >
+          {person.name}
+        </span>
+      )}
+
+      <ToggleSwitch
+        on={enabled}
+        onChange={() => togglePersonEnabled(person.id)}
+        title={enabled ? `${person.name} is visible. Toggle to hide.` : `${person.name} is hidden. Toggle to show.`}
+      />
+
+      <button
+        type="button"
+        onClick={() => {
+          if (confirm(`Permanently remove ${person.name}? Their chips go to the backlog.`)) onRemove();
+        }}
+        className="rounded-full px-1.5 py-0 text-xs text-muted hover:bg-rose-500/15 hover:text-rose-300"
+        title="Permanently delete"
+      >
+        ×
+      </button>
+    </li>
+  );
+}
+
+function ToggleSwitch({ on, onChange, title }: { on: boolean; onChange: () => void; title?: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={onChange}
+      title={title}
+      className={[
+        'relative h-5 w-9 shrink-0 rounded-full transition-colors',
+        on ? 'bg-accent' : 'bg-white/15',
+      ].join(' ')}
+    >
+      <span
+        className={[
+          'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform',
+          on ? 'translate-x-[18px]' : 'translate-x-0.5',
+        ].join(' ')}
+      />
+    </button>
   );
 }
 
@@ -532,12 +595,3 @@ function SectionHeader({ title, action }: { title: string; action?: React.ReactN
   );
 }
 
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-}

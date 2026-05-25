@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useStore } from '../store';
+import { useStore, selectVisiblePeople } from '../store';
 import { PersonCard } from './PersonCard';
 import { resolvePhotoUrl } from '../lib/photo';
 import type { Person } from '../types';
 
 export function CardsCanvas() {
-  const people = useStore((s) => s.people);
+  const people = useStore(selectVisiblePeople);
   const [selectedId, setSelectedId] = useState<string | null>(people[0]?.id ?? null);
 
   // Keep selection valid if people list changes.
@@ -22,7 +22,7 @@ export function CardsCanvas() {
   return (
     <section className="mx-auto max-w-7xl px-8 py-12">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-ink">Full team card</h2>
+        <h2 className="text-2xl font-bold text-ink">Full card: ownership by PMM</h2>
       </div>
 
       <div className="flex gap-5">

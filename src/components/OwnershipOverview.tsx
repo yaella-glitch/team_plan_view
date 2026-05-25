@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
-import { useStore } from '../store';
+import { useStore, selectVisiblePeople } from '../store';
 import { CATEGORIES, CATEGORY_BY_ID } from '../constants';
 import type { Category, ChipValue, Person } from '../types';
 import { encodeSection, chipDragId } from '../lib/dnd';
@@ -26,7 +26,7 @@ const ACTIVE_TAB_STYLE: Record<Category, string> = {
 export function OwnershipOverview() {
   const activeTab = useStore((s) => s.activeTopicTab);
   const setActiveTab = useStore((s) => s.setActiveTopicTab);
-  const people = useStore((s) => s.people);
+  const people = useStore(selectVisiblePeople);
   const chips = useStore((s) => s.chips);
 
   return (
@@ -61,8 +61,8 @@ export function OwnershipOverview() {
           })}
         </div>
 
-        {/* Horizontal row of PMM tiles */}
-        <div className="flex flex-wrap gap-x-6 gap-y-5 pt-2">
+        {/* Grid of PMM tiles — each tile lays out photo + name + chips horizontally */}
+        <div className="grid grid-cols-1 gap-x-6 gap-y-3 pt-2 sm:grid-cols-2 xl:grid-cols-3">
           {people.map((p) => (
             <PersonTile
               key={p.id}
@@ -100,12 +100,12 @@ function PersonTile({
     <div
       ref={setNodeRef}
       className={[
-        'flex w-[150px] flex-col items-center gap-2 rounded-2xl p-2 transition-colors',
+        'flex items-center gap-3 rounded-2xl p-2 transition-colors',
         isOver ? 'bg-accent/10 ring-2 ring-accent/40' : '',
       ].join(' ')}
     >
       {/* Photo */}
-      <div className="h-20 w-20 overflow-hidden rounded-full ring-2 ring-white/10">
+      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full ring-2 ring-white/10">
         {photo && !imgFailed ? (
           <img
             src={photo}
@@ -116,7 +116,7 @@ function PersonTile({
         ) : (
           <div
             className={[
-              'flex h-full w-full items-center justify-center text-lg font-semibold',
+              'flex h-full w-full items-center justify-center text-sm font-semibold',
               imgFailed ? 'bg-rose-500/20 text-rose-300' : 'bg-white/5 text-muted',
             ].join(' ')}
           >
@@ -126,11 +126,11 @@ function PersonTile({
       </div>
 
       {/* Name */}
-      <div className="w-full truncate text-center text-xs font-semibold text-ink">{person.name}</div>
+      <div className="w-[88px] shrink-0 truncate text-sm font-semibold text-ink">{person.name}</div>
 
-      {/* Chips for the active category */}
+      {/* Chips for the active category — flow inline next to name */}
       <SortableContext items={chips.map((c) => chipDragId(c.id))} strategy={rectSortingStrategy}>
-        <div className="flex w-full flex-wrap justify-center gap-1">
+        <div className="flex flex-1 flex-wrap items-center gap-1.5">
           {chips.length === 0 ? (
             <span className="text-[11px] italic text-muted">—</span>
           ) : (

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { useStore } from '../store';
+import { useStore, selectVisiblePeople } from '../store';
 import { resolvePhotoUrl } from '../lib/photo';
 import type { Person, SubTeam } from '../types';
 
 /**
- * Sub-teams canvas — drag PMM photos into sub-team boxes.
+ * Professional pods canvas — drag PMM photos into sub-team boxes.
  * Each sub-team has a manager slot + members area, plus an editable title.
  */
 
@@ -16,7 +16,7 @@ const subteamManagerDropId = (id: string) => `subteam-manager:${id}`;
 const memberDragId = (personId: string) => `member:${personId}`;
 
 export function SubTeamsCanvas() {
-  const people = useStore((s) => s.people);
+  const people = useStore(selectVisiblePeople);
   const subTeams = useStore((s) => s.subTeams ?? []);
   const addSubTeam = useStore((s) => s.addSubTeam);
 
@@ -28,7 +28,7 @@ export function SubTeamsCanvas() {
   return (
     <section className="mx-auto max-w-7xl px-8 py-12">
       <div className="mb-6 flex items-center gap-3">
-        <h2 className="text-2xl font-bold text-ink">Sub-teams</h2>
+        <h2 className="text-2xl font-bold text-ink">Professional pods</h2>
         <button
           type="button"
           onClick={() => addSubTeam()}
@@ -46,7 +46,7 @@ export function SubTeamsCanvas() {
           No sub-teams yet. Hit the + to create one.
         </div>
       ) : (
-        <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {subTeams.map((st) => (
             <SubTeamBox key={st.id} subTeam={st} people={people} />
           ))}
@@ -58,21 +58,23 @@ export function SubTeamsCanvas() {
 
 function UnassignedPool({ people }: { people: Person[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: UNASSIGNED_DROP_ID });
+  const isEmpty = people.length === 0;
 
+  // When empty, show a tiny strip — collapses to a single line.
   return (
     <div
       ref={setNodeRef}
       className={[
-        'rounded-2xl border-2 border-dashed p-4 transition-colors',
+        'rounded-2xl border-2 border-dashed transition-all',
+        isEmpty ? 'px-3 py-2' : 'p-4',
         isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.02]',
       ].join(' ')}
     >
-      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+      <p className={['text-xs font-semibold uppercase tracking-wide text-muted', isEmpty ? '' : 'mb-3'].join(' ')}>
         Unassigned <span className="ml-1 normal-case text-muted/60">({people.length})</span>
+        {isEmpty && <span className="ml-2 normal-case text-muted/60 italic">— everyone assigned</span>}
       </p>
-      {people.length === 0 ? (
-        <p className="text-xs italic text-muted">All team members assigned.</p>
-      ) : (
+      {!isEmpty && (
         <div className="flex flex-wrap gap-2">
           {people.map((p) => (
             <PhotoChip key={p.id} person={p} />
@@ -188,7 +190,7 @@ function ManagerSlot({ subTeamId, manager }: { subTeamId: string; manager: Perso
   const { setNodeRef, isOver } = useDroppable({ id: subteamManagerDropId(subTeamId) });
   return (
     <div>
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Manager</p>
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Lead</p>
       <div
         ref={setNodeRef}
         className={[
@@ -199,7 +201,7 @@ function ManagerSlot({ subTeamId, manager }: { subTeamId: string; manager: Perso
         {manager ? (
           <PhotoChip person={manager} size="lg" />
         ) : (
-          <p className="text-xs italic text-muted">Drop one person here to designate as manager</p>
+          <p className="text-xs italic text-muted">Drop one person here as Lead</p>
         )}
       </div>
     </div>
@@ -209,23 +211,18 @@ function ManagerSlot({ subTeamId, manager }: { subTeamId: string; manager: Perso
 function MembersArea({ subTeamId, members }: { subTeamId: string; members: Person[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: subteamMembersDropId(subTeamId) });
   return (
-    <div>
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
-        Team members <span className="text-slate-400">({members.length})</span>
-      </p>
-      <div
-        ref={setNodeRef}
-        className={[
-          'flex min-h-[80px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed px-3 py-2.5 transition-colors',
-          isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.03]',
-        ].join(' ')}
-      >
-        {members.length === 0 ? (
-          <p className="text-xs italic text-muted">Drop team photos here</p>
-        ) : (
-          members.map((p) => <PhotoChip key={p.id} person={p} />)
-        )}
-      </div>
+    <div
+      ref={setNodeRef}
+      className={[
+        'flex min-h-[80px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed px-3 py-2.5 transition-colors',
+        isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.03]',
+      ].join(' ')}
+    >
+      {members.length === 0 ? (
+        <p className="text-xs italic text-muted">Drop team photos here</p>
+      ) : (
+        members.map((p) => <PhotoChip key={p.id} person={p} />)
+      )}
     </div>
   );
 }

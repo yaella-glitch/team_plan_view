@@ -23,6 +23,9 @@ export type Person = {
   photoUrl: string;
   hiddenCategories: Category[];
   order: number;
+  /** Soft hide — when false, person is filtered out of all display views.
+   *  Treat undefined as true (legacy persisted state has no field). */
+  enabled?: boolean;
 };
 
 export type AboutImage = {

@@ -16,6 +16,9 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
   const [imgFailed, setImgFailed] = useState(false);
+  /** When the avatar is near the right edge of the viewport, anchor the popover
+   *  to the right instead of the left so it doesn't overflow off-screen. */
+  const [anchorRight, setAnchorRight] = useState(false);
 
   useEffect(() => setDraft(person.photoUrl), [person.photoUrl]);
   useEffect(() => setImgFailed(false), [person.photoUrl]);
@@ -28,6 +31,15 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
     };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
+  }, [open]);
+
+  // When opening, decide anchor side based on where there's room.
+  useEffect(() => {
+    if (!open || !ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const POPOVER_WIDTH = 320; // matches w-80
+    const spaceOnRight = window.innerWidth - rect.left;
+    setAnchorRight(spaceOnRight < POPOVER_WIDTH + 16);
   }, [open]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +99,10 @@ export function AvatarEditor({ person, size = 56, className = '' }: Props) {
 
       {open && (
         <div
-          className="absolute left-0 top-full z-40 mt-2 w-80 rounded-xl border border-white/15 p-3 shadow-xl"
+          className={[
+            'absolute top-full z-40 mt-2 w-80 rounded-xl border border-white/15 p-3 shadow-xl',
+            anchorRight ? 'right-0' : 'left-0',
+          ].join(' ')}
           style={{ background: 'rgb(var(--surface))' }}
         >
           <label className="block text-xs font-semibold text-ink">Photo for {person.name}</label>

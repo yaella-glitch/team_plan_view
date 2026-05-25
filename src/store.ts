@@ -19,6 +19,7 @@ type Actions = {
   removePerson: (id: string) => void;
   hideCategoryForPerson: (personId: string, category: Category) => void;
   showCategoryForPerson: (personId: string, category: Category) => void;
+  togglePersonEnabled: (id: string) => void;
 
   // Topic tab
   setActiveTopicTab: (cat: Category) => void;
@@ -221,6 +222,13 @@ export const useStore = create<Store>()(
           ),
         })),
 
+      togglePersonEnabled: (id) =>
+        set((state) => ({
+          people: state.people.map((p) =>
+            p.id === id ? { ...p, enabled: p.enabled === false ? true : false } : p,
+          ),
+        })),
+
       setActiveTopicTab: (cat) => set({ activeTopicTab: cat }),
 
       // About
@@ -331,6 +339,11 @@ export const useStore = create<Store>()(
 );
 
 // --- Selectors ----------------------------------------------------------------
+
+/** Visible (enabled) people only — used by all display views. */
+export function selectVisiblePeople(state: AppState): Person[] {
+  return state.people.filter((p) => p.enabled !== false);
+}
 
 export function selectChipsFor(state: AppState, ownerId: string | null, category: Category): ChipValue[] {
   return state.chips
