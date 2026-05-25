@@ -146,7 +146,7 @@ function PersonTile({
       </div>
 
       {/* Name — small */}
-      <div className="w-full truncate text-center text-[11px] font-semibold text-ink">{person.name}</div>
+      <div className="w-full truncate text-center text-[9.5px] font-semibold text-ink">{person.name}</div>
 
       {/* Chips — small, centered, wrap below the name */}
       <SortableContext items={chips.map((c) => chipDragId(c.id))} strategy={rectSortingStrategy}>
