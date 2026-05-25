@@ -64,9 +64,9 @@ export function OwnershipOverview() {
           })}
         </div>
 
-        {/* Grid of PMM tiles — each tile lays out photo + name + chips horizontally */}
+        {/* Grid of PMM tiles — compact vertical: photo on top, name, then chips below */}
         <SortableContext items={people.map((p) => personDragId(p.id))} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 gap-x-6 gap-y-3 pt-2 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-3 gap-x-4 gap-y-5 pt-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
             {people.map((p) => (
               <PersonTile
                 key={p.id}
@@ -114,13 +114,13 @@ function PersonTile({
         opacity: sortable.isDragging ? 0.4 : 1,
       }}
       className={[
-        'flex items-center gap-3 rounded-2xl p-2 transition-colors',
+        'flex flex-col items-center gap-1.5 rounded-2xl p-2 transition-colors',
         isOver ? 'bg-accent/10 ring-2 ring-accent/40' : '',
       ].join(' ')}
     >
-      {/* Photo — drag handle for reordering */}
+      {/* Photo — drag handle */}
       <div
-        className="h-12 w-12 shrink-0 cursor-grab overflow-hidden rounded-full ring-2 ring-white/10 active:cursor-grabbing"
+        className="h-14 w-14 shrink-0 cursor-grab overflow-hidden rounded-full ring-2 ring-white/10 active:cursor-grabbing"
         title="Drag to reorder"
         {...sortable.attributes}
         {...sortable.listeners}
@@ -145,14 +145,14 @@ function PersonTile({
         )}
       </div>
 
-      {/* Name */}
-      <div className="w-[88px] shrink-0 truncate text-sm font-semibold text-ink">{person.name}</div>
+      {/* Name — small */}
+      <div className="w-full truncate text-center text-xs font-semibold text-ink">{person.name}</div>
 
-      {/* Chips for the active category — flow inline next to name */}
+      {/* Chips — small, centered, wrap below the name */}
       <SortableContext items={chips.map((c) => chipDragId(c.id))} strategy={rectSortingStrategy}>
-        <div className="flex flex-1 flex-wrap items-center gap-1.5">
+        <div className="flex w-full flex-wrap items-center justify-center gap-1">
           {chips.length === 0 ? (
-            <span className="text-[11px] italic text-muted">—</span>
+            <span className="text-[10px] italic text-muted">—</span>
           ) : (
             chips.map((c) => <Chip key={c.id} chip={c} compact hidePrimary />)
           )}

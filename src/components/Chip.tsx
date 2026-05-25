@@ -59,7 +59,7 @@ export function Chip({ chip, compact = false, hidePrimary = false }: Props) {
         meta.tint,
         meta.border,
         chip.isPrimary && !hidePrimary ? 'font-semibold ring-1 ring-white/30' : '',
-        compact ? 'text-[11px] px-2 py-0.5' : '',
+        compact ? 'text-[10px] leading-tight px-1.5 py-0.5' : '',
         'select-none',
       ].join(' ')}
     >
