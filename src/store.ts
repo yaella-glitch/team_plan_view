@@ -50,7 +50,7 @@ type Actions = {
   removeSubTeamTag: (id: string, tagIndex: number) => void;
 
   // Topics
-  addTopic: (name?: string) => string;
+  addTopic: (name?: string, category?: Category) => string;
   renameTopic: (id: string, name: string) => void;
   removeTopic: (id: string) => void;
   reorderTopic: (id: string, targetId: string) => void;
@@ -412,12 +412,12 @@ export const useStore = create<Store>()(
         })),
 
       // Topics ---------------------------------------------------------------
-      addTopic: (name = 'New topic') => {
+      addTopic: (name = 'New topic', category = 'pmmFocus') => {
         const id = nanoid(8);
         set((state) => ({
           topics: [
             ...(state.topics ?? []),
-            { id, name, pmmIds: [], order: (state.topics ?? []).length },
+            { id, name, category, pmmIds: [], order: (state.topics ?? []).length },
           ],
         }));
         return id;
@@ -474,7 +474,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'team-plan-view-v1',
-      version: 3,
+      version: 4,
       migrate: (persisted, fromVersion) => {
         const s = (persisted ?? {}) as Partial<AppState> & { chips?: ChipValue[]; people?: Person[]; activeTopicTab?: Category; topics?: Topic[] };
         if (fromVersion < 2) {
@@ -501,6 +501,15 @@ export const useStore = create<Store>()(
           // v2 → v3: introduce Topics. Seed with the canonical list if absent.
           if (!Array.isArray(s.topics) || s.topics.length === 0) {
             s.topics = buildSeedTopics();
+          }
+        }
+        if (fromVersion < 4) {
+          // v3 → v4: Topic gains a `category` field. Default existing to pmmFocus.
+          if (Array.isArray(s.topics)) {
+            s.topics = s.topics.map((t) => ({
+              ...t,
+              category: (t as Topic).category ?? 'pmmFocus',
+            }));
           }
         }
         return s as AppState;

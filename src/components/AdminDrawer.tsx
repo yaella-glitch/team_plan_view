@@ -5,7 +5,8 @@ import { useTheme, DEFAULT_PALETTE, MONDAY_PALETTE, type Palette } from '../them
 import { AvatarEditor } from './AvatarEditor';
 import { ADMIN_PASSWORD_HASH } from '../access';
 import { resolvePhotoUrl } from '../lib/photo';
-import type { AppState, Person } from '../types';
+import { TOPIC_TAB_CATEGORIES, CATEGORY_BY_ID } from '../constants';
+import type { AppState, Category, Person } from '../types';
 
 const ADMIN_UNLOCK_KEY = 'team-plan-view-admin-unlocked-v1';
 
@@ -471,47 +472,61 @@ function TopicsSection() {
   const removeTopic = useStore((s) => s.removeTopic);
   const addPmmToTopic = useStore((s) => s.addPmmToTopic);
   const removePmmFromTopic = useStore((s) => s.removePmmFromTopic);
-  const sortedTopics = [...topics].sort((a, b) => a.order - b.order);
 
   return (
     <section className="mb-8">
-      <SectionHeader
-        title="Topics"
-        action={
-          <button
-            type="button"
-            onClick={() => {
-              const name = prompt('New topic name?');
-              if (name && name.trim()) addTopic(name.trim());
-            }}
-            className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-xs text-muted hover:border-accent/60 hover:text-ink"
-          >
-            + Add
-          </button>
-        }
-      />
-      <p className="mb-2 text-[11px] text-muted">
-        Edit names, assign PMMs, or remove. Each topic can have multiple PMMs.
+      <SectionHeader title="Topics" />
+      <p className="mb-3 text-[11px] text-muted">
+        Topics in the Ownership view, grouped by category. Each topic can hold multiple PMMs.
       </p>
-      {sortedTopics.length === 0 ? (
-        <p className="text-xs italic text-muted">No topics yet.</p>
-      ) : (
-        <ul className="space-y-2">
-          {sortedTopics.map((t) => (
-            <TopicAdminRow
-              key={t.id}
-              topicId={t.id}
-              topicName={t.name}
-              pmmIds={t.pmmIds}
-              allPeople={people}
-              onRename={(name) => renameTopic(t.id, name)}
-              onRemove={() => removeTopic(t.id)}
-              onAddPmm={(pmmId) => addPmmToTopic(t.id, pmmId)}
-              onRemovePmm={(pmmId) => removePmmFromTopic(t.id, pmmId)}
-            />
-          ))}
-        </ul>
-      )}
+      {TOPIC_TAB_CATEGORIES.map((catId) => {
+        const meta = CATEGORY_BY_ID[catId];
+        const catTopics = topics.filter((t) => t.category === catId).sort((a, b) => a.order - b.order);
+        return (
+          <div key={catId} className="mb-4">
+            <div className="mb-1.5 flex items-center justify-between">
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                style={{
+                  backgroundColor: meta.ownershipColor + '33',
+                  color: meta.ownershipColor,
+                }}
+              >
+                {meta.icon} {meta.label}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const name = prompt(`New tag in ${meta.label}?`);
+                  if (name && name.trim()) addTopic(name.trim(), catId as Category);
+                }}
+                className="rounded-full border border-white/15 bg-white/[0.05] px-2 py-0 text-[11px] text-muted hover:border-accent/60 hover:text-ink"
+              >
+                + tag
+              </button>
+            </div>
+            {catTopics.length === 0 ? (
+              <p className="text-[11px] italic text-muted">— no tags yet</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {catTopics.map((t) => (
+                  <TopicAdminRow
+                    key={t.id}
+                    topicId={t.id}
+                    topicName={t.name}
+                    pmmIds={t.pmmIds}
+                    allPeople={people}
+                    onRename={(name) => renameTopic(t.id, name)}
+                    onRemove={() => removeTopic(t.id)}
+                    onAddPmm={(pmmId) => addPmmToTopic(t.id, pmmId)}
+                    onRemovePmm={(pmmId) => removePmmFromTopic(t.id, pmmId)}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </section>
   );
 }

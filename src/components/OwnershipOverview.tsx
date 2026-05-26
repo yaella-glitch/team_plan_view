@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useStore, selectVisiblePeople } from '../store';
-import type { Person, Topic } from '../types';
+import { TOPIC_TAB_CATEGORIES, CATEGORY_BY_ID } from '../constants';
+import type { Category, Person, Topic } from '../types';
 import { resolvePhotoUrl } from '../lib/photo';
 
 /**
@@ -37,20 +38,68 @@ function colorForTopic(order: number): string {
 
 export function OwnershipOverview() {
   const topics = useStore((s) => s.topics ?? []);
-  const sortedTopics = [...topics].sort((a, b) => a.order - b.order);
+  const activeTab = useStore((s) => s.activeTopicTab);
+  const setActiveTab = useStore((s) => s.setActiveTopicTab);
+  const addTopic = useStore((s) => s.addTopic);
+
+  // If the persisted activeTopicTab is a category not in the new 5-tab list
+  // (e.g. 'productFocal'), fall back to the first allowed tab.
+  const safeActive = TOPIC_TAB_CATEGORIES.includes(activeTab) ? activeTab : 'pmmFocus';
+
+  const tabTopics = topics
+    .filter((t) => t.category === safeActive)
+    .sort((a, b) => a.order - b.order);
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-8">
       <h2 className="mb-4 text-2xl font-bold text-ink">Ownership by topic</h2>
 
       <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 shadow-sm">
+        {/* Tabs row */}
+        <div className="mb-5 flex flex-wrap gap-2">
+          {TOPIC_TAB_CATEGORIES.map((catId) => {
+            const meta = CATEGORY_BY_ID[catId];
+            const active = catId === safeActive;
+            return (
+              <button
+                key={catId}
+                type="button"
+                onClick={() => setActiveTab(catId)}
+                className="inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-sm transition-all"
+                style={
+                  active
+                    ? {
+                        backgroundColor: meta.ownershipColor,
+                        borderColor: meta.ownershipColor,
+                        color: pickReadableTextColor(meta.ownershipColor),
+                        fontWeight: 600,
+                      }
+                    : {
+                        backgroundColor: 'transparent',
+                        borderColor: 'transparent',
+                        color: 'rgb(var(--muted))',
+                      }
+                }
+              >
+                <span className="text-base leading-none">{meta.icon}</span>
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Topic cards for the active tab */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {sortedTopics.map((t) => (
-            <TopicCard key={t.id} topic={t} color={colorForTopic(t.order)} />
+          {tabTopics.map((t, i) => (
+            <TopicCard key={t.id} topic={t} color={colorForTopic(i)} />
           ))}
-          {sortedTopics.length === 0 && (
+
+          {/* + Add tag tile */}
+          <AddTagTile category={safeActive} onAdd={(name) => addTopic(name, safeActive)} />
+
+          {tabTopics.length === 0 && (
             <p className="col-span-full text-sm italic text-muted">
-              No topics yet. Add them from Admin → Topics.
+              No tags in {CATEGORY_BY_ID[safeActive].label} yet. Use the + tile.
             </p>
           )}
         </div>
@@ -59,19 +108,71 @@ export function OwnershipOverview() {
   );
 }
 
+function AddTagTile({ category: _category, onAdd }: { category: Category; onAdd: (name: string) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  const commit = () => {
+    const v = draft.trim();
+    if (v) onAdd(v);
+    setDraft('');
+    setAdding(false);
+  };
+
+  return adding ? (
+    <input
+      autoFocus
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+        else if (e.key === 'Escape') {
+          setDraft('');
+          setAdding(false);
+        }
+      }}
+      placeholder="new tag…"
+      className="aspect-[5/2] w-full rounded-xl border-2 border-dashed border-accent/60 bg-white/[0.04] px-3 text-sm text-ink outline-none"
+    />
+  ) : (
+    <button
+      type="button"
+      onClick={() => setAdding(true)}
+      className="aspect-[5/2] w-full rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] text-sm text-muted hover:border-accent/60 hover:text-ink"
+      title="Add a new tag in this category"
+    >
+      + Add tag
+    </button>
+  );
+}
+
 function TopicCard({ topic, color }: { topic: Topic; color: string }) {
   const allPeople = useStore(selectVisiblePeople);
   const addPmmToTopic = useStore((s) => s.addPmmToTopic);
+  const renameTopic = useStore((s) => s.renameTopic);
+  const removeTopic = useStore((s) => s.removeTopic);
   const { setNodeRef, isOver } = useDroppable({
     id: topicDropId(topic.id),
     data: { topicId: topic.id, kind: 'topic-card' },
   });
   const [showPicker, setShowPicker] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(topic.name);
+  useEffect(() => setDraft(topic.name), [topic.name]);
+
   const owners = topic.pmmIds
     .map((pid) => allPeople.find((p) => p.id === pid))
     .filter((p): p is Person => Boolean(p));
   const available = allPeople.filter((p) => !topic.pmmIds.includes(p.id));
   const textColor = pickReadableTextColor(color);
+
+  const commitRename = () => {
+    const v = draft.trim();
+    if (v && v !== topic.name) renameTopic(topic.id, v);
+    else setDraft(topic.name);
+    setEditing(false);
+  };
 
   return (
     <div
@@ -86,10 +187,46 @@ function TopicCard({ topic, color }: { topic: Topic; color: string }) {
     >
       {/* Topic name (top-left, leaves room for owners on the right) */}
       <div className="absolute inset-x-2.5 top-2 pr-14">
-        <h4 className="text-xs font-bold leading-tight" style={{ color: textColor }}>
-          {topic.name}
-        </h4>
+        {editing ? (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+              else if (e.key === 'Escape') {
+                setDraft(topic.name);
+                setEditing(false);
+              }
+            }}
+            className="w-full bg-transparent text-xs font-bold leading-tight outline-none"
+            style={{ color: textColor }}
+          />
+        ) : (
+          <h4
+            className="cursor-text text-xs font-bold leading-tight"
+            style={{ color: textColor }}
+            onDoubleClick={() => setEditing(true)}
+            title="Double-click to rename"
+          >
+            {topic.name}
+          </h4>
+        )}
       </div>
+
+      {/* Delete (top-right) — hover to reveal */}
+      <button
+        type="button"
+        onClick={() => {
+          if (confirm(`Delete tag "${topic.name}"?`)) removeTopic(topic.id);
+        }}
+        className="absolute right-1 top-1 z-20 rounded-full px-1 text-xs opacity-0 transition-opacity group-hover/card:opacity-70 hover:!opacity-100"
+        style={{ color: textColor }}
+        title="Delete this tag"
+      >
+        ×
+      </button>
 
       {/* Owner photos (bottom-right, stacked horizontally) */}
       <div className="absolute bottom-1.5 right-1.5 flex flex-wrap items-center justify-end gap-1">

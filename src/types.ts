@@ -56,6 +56,8 @@ export type SubTeam = {
 export type Topic = {
   id: string;
   name: string;
+  /** Which Ownership tab this topic lives under. */
+  category: Category;
   /** Many-to-many: a topic can have multiple PMM owners. */
   pmmIds: string[];
   order: number;

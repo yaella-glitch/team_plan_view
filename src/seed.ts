@@ -15,9 +15,11 @@ const SEED_TOPIC_NAMES = [
 ];
 
 export function buildSeedTopics(): Topic[] {
+  // All seed topics start under "PMM focus"; other categories begin empty.
   return SEED_TOPIC_NAMES.map((name, i) => ({
     id: nanoid(8),
     name,
+    category: 'pmmFocus',
     pmmIds: [],
     order: i,
   }));
