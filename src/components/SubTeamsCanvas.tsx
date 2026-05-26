@@ -13,7 +13,6 @@ const memberDragId = (personId: string) => `member:${personId}`;
 export function SubTeamsCanvas() {
   const people = useStore(selectVisiblePeople);
   const allPods = useStore((s) => s.subTeams ?? []);
-  const addSubTeam = useStore((s) => s.addSubTeam);
 
   const crossCut = allPods.filter((p) => p.kind === 'crossCut');
   const normal = allPods.filter((p) => p.kind !== 'crossCut');
@@ -25,25 +24,7 @@ export function SubTeamsCanvas() {
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-12">
-      <div className="mb-6 flex items-center gap-3">
-        <h2 className="text-2xl font-bold text-ink">Professional pods</h2>
-        <button
-          type="button"
-          onClick={() => addSubTeam()}
-          className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
-          title="Add a pod"
-        >
-          + Pod
-        </button>
-        <button
-          type="button"
-          onClick={() => addSubTeam('New cross pod', 'crossCut')}
-          className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
-          title="Add a cross pod that spans below the others"
-        >
-          + Cross
-        </button>
-      </div>
+      <h2 className="mb-6 text-2xl font-bold text-ink">Professional pods</h2>
 
       <UnassignedPool people={unassigned} />
 
@@ -53,7 +34,7 @@ export function SubTeamsCanvas() {
           No pods yet. Hit + Pod to create one.
         </div>
       ) : normal.length > 0 ? (
-        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {normal.map((st) => (
             <PodBox key={st.id} subTeam={st} people={people} />
           ))}
@@ -278,16 +259,20 @@ function CrossCutSlot(
   const dropId =
     props.kind === 'manager' ? subteamManagerDropId(props.subTeamId) : subteamMembersDropId(props.subTeamId);
   const { setNodeRef, isOver } = useDroppable({ id: dropId });
+  const membersEmpty = props.kind === 'members' && props.people.length === 0;
+
   return (
     <div className="flex items-center gap-2">
-      {props.label && (
+      {props.label && !membersEmpty && (
         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">{props.label}</span>
       )}
       <div
         ref={setNodeRef}
         className={[
-          'flex min-h-[36px] items-center gap-1.5 rounded-xl border border-dashed px-2 py-1',
-          isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10',
+          'flex items-center gap-1.5 rounded-xl border border-dashed px-2 py-1',
+          // Empty members slot: collapse to a tiny dotted hint that still accepts drops
+          membersEmpty ? 'min-h-[28px] min-w-[24px] border-white/5' : 'min-h-[36px]',
+          isOver ? 'border-accent/60 bg-accent/10' : !membersEmpty ? 'border-white/10' : '',
         ].join(' ')}
       >
         {props.kind === 'manager' ? (
@@ -296,8 +281,6 @@ function CrossCutSlot(
           ) : (
             <span className="text-[10px] italic text-muted px-1">Drop lead</span>
           )
-        ) : props.people.length === 0 ? (
-          <span className="text-[10px] italic text-muted px-1">Drop members</span>
         ) : (
           props.people.map((p) => <PhotoChip key={p.id} person={p} />)
         )}

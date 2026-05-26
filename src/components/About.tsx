@@ -5,8 +5,6 @@ import { compressImage } from '../lib/image';
 
 export function About() {
   const about = useStore((s) => (s.about && s.about.length > 0 ? s.about : [null, null, null]));
-  const addAboutSlide = useStore((s) => s.addAboutSlide);
-  const removeAboutSlide = useStore((s) => s.removeAboutSlide);
   const [active, setActive] = useState(0);
 
   // Clamp active index if count changes
@@ -19,20 +17,6 @@ export function About() {
   const next = () => setActive((i) => (i === count - 1 ? 0 : i + 1));
 
   const image = about[active] ?? null;
-
-  const onAdd = () => {
-    addAboutSlide();
-    setActive(count); // jump to newly added slide
-  };
-
-  const onRemove = () => {
-    if (count <= 1) {
-      alert('Need at least one slide.');
-      return;
-    }
-    if (!confirm('Remove this slide?')) return;
-    removeAboutSlide(active);
-  };
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-10">
@@ -65,41 +49,20 @@ export function About() {
         )}
       </div>
 
-      {/* Dots + add/remove controls */}
-      <div className="mt-4 flex items-center justify-center gap-3">
-        <div className="flex items-center gap-2">
-          {about.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => setActive(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              className={[
-                'h-2 rounded-full transition-all',
-                i === active ? 'w-8 bg-accent' : 'w-2 bg-white/20 hover:bg-white/40',
-              ].join(' ')}
-            />
-          ))}
-        </div>
-        <div className="mx-2 h-4 w-px bg-white/15" />
-        <button
-          type="button"
-          onClick={onAdd}
-          title="Add a slide"
-          className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-accent hover:border-accent hover:bg-accent/20"
-        >
-          + Add slide
-        </button>
-        {image?.dataUrl && (
+      {/* Dots */}
+      <div className="mt-4 flex items-center justify-center gap-2">
+        {about.map((_, i) => (
           <button
+            key={i}
             type="button"
-            onClick={onRemove}
-            title="Remove this slide"
-            className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-xs text-muted hover:border-rose-400/60 hover:text-rose-300"
-          >
-            × Remove
-          </button>
-        )}
+            onClick={() => setActive(i)}
+            aria-label={`Go to slide ${i + 1}`}
+            className={[
+              'h-2 rounded-full transition-all',
+              i === active ? 'w-8 bg-accent' : 'w-2 bg-white/20 hover:bg-white/40',
+            ].join(' ')}
+          />
+        ))}
       </div>
     </section>
   );

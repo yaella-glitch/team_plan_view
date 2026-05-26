@@ -96,29 +96,20 @@ export default function App() {
       return;
     }
 
-    // CASE: Ownership view — drag a PMM photo from one tag to another to
-    // reassign that ownership area. Implementation: change the chip's owner
-    // to a representative of the destination tag bucket. If the destination
-    // tag has no owners yet, we can't easily pick one — skip.
+    // CASE: Ownership view — drag a PMM photo from one chip card to another
+    // to swap that card's owner with the dragged person.
     if (activeIdStr.startsWith('ownership-chip:')) {
-      const chipId = e.active.data.current?.chipId as string | undefined;
-      if (!chipId) return;
-      const chip = chips.find((c) => c.id === chipId);
-      if (!chip) return;
-      if (overIdStr.startsWith('tag-bucket:')) {
-        const [, cat, ...rest] = overIdStr.split(':');
-        const labelKey = rest.join(':');
-        const category = cat as typeof chip.category;
-        // Find the canonical (case-preserving) label by looking at any chip in the bucket.
-        const sample = chips.find(
-          (c) => c.category === category && c.label.trim().toLowerCase() === labelKey,
-        );
-        const newLabel = sample ? sample.label : chip.label;
-        if (newLabel !== chip.label || category !== chip.category) {
-          useStore.getState().updateChipLabel(chipId, newLabel);
-          // No category move in this drag — the user moved a photo within the
-          // same active tab (i.e. same category). Skipping cross-category.
-        }
+      const sourceOwnerId = e.active.data.current?.ownerId as string | undefined;
+      if (!sourceOwnerId) return;
+      if (overIdStr.startsWith('chip-card:')) {
+        const destChipId = overIdStr.slice('chip-card:'.length);
+        const destChip = chips.find((c) => c.id === destChipId);
+        if (!destChip) return;
+        // Reassign destination chip to the dragged person.
+        useStore.getState().moveChip(destChipId, {
+          ownerId: sourceOwnerId,
+          category: destChip.category,
+        });
       }
       return;
     }

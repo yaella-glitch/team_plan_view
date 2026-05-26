@@ -163,7 +163,12 @@ function AdminLock({ onUnlock }: { onUnlock: () => void }) {
 function QuickAddSection() {
   const addPerson = useStore((s) => s.addPerson);
   const addChip = useStore((s) => s.addChip);
+  const addSubTeam = useStore((s) => s.addSubTeam);
+  const addAboutSlide = useStore((s) => s.addAboutSlide);
+  const addLatestItem = useStore((s) => s.addLatestItem);
   const [openOwnership, setOpenOwnership] = useState(false);
+
+  const tile = 'rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:bg-white/[0.06]';
 
   return (
     <section className="mb-8">
@@ -175,21 +180,41 @@ function QuickAddSection() {
             const name = prompt('New PMM name?');
             if (name && name.trim()) addPerson(name.trim());
           }}
-          className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:bg-white/[0.06]"
+          className={tile}
         >
           <div className="flex items-center gap-2">
             <span className="text-xl">👤</span>
             <span>+ Add PMM</span>
           </div>
         </button>
-        <button
-          type="button"
-          onClick={() => setOpenOwnership(true)}
-          className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:bg-white/[0.06]"
-        >
+        <button type="button" onClick={() => setOpenOwnership(true)} className={tile}>
           <div className="flex items-center gap-2">
             <span className="text-xl">🧩</span>
             <span>+ Add ownership area</span>
+          </div>
+        </button>
+        <button type="button" onClick={() => addSubTeam()} className={tile}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🟪</span>
+            <span>+ Add pod</span>
+          </div>
+        </button>
+        <button type="button" onClick={() => addSubTeam('New cross pod', 'crossCut')} className={tile}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">⬌</span>
+            <span>+ Add cross pod</span>
+          </div>
+        </button>
+        <button type="button" onClick={() => addAboutSlide()} className={tile}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🖼</span>
+            <span>+ About slide</span>
+          </div>
+        </button>
+        <button type="button" onClick={() => addLatestItem()} className={tile}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">⭐</span>
+            <span>+ Latest highlight</span>
           </div>
         </button>
       </div>

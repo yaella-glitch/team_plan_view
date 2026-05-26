@@ -35,10 +35,10 @@ export function CardsCanvas() {
         <h2 className="text-2xl font-bold text-ink">Full card: ownership by PMM</h2>
       </div>
 
-      <div className="flex gap-5">
-        {/* Left strip: photo carousel */}
+      <div className="flex items-stretch gap-5">
+        {/* Left strip: photo carousel — stretches to match card height */}
         <aside className="w-[96px] shrink-0">
-          <div className="sticky top-4 max-h-[80vh] overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 shadow-sm backdrop-blur">
+          <div className="h-full overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 shadow-sm backdrop-blur">
             <SortableContext
               items={people.map((p) => personDragId(p.id))}
               strategy={verticalListSortingStrategy}
