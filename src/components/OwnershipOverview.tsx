@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useStore, selectVisiblePeople } from '../store';
@@ -18,23 +18,6 @@ import { resolvePhotoUrl } from '../lib/photo';
 const topicPmmDragId = (topicId: string, personId: string) => `topic-pmm:${topicId}:${personId}`;
 const topicDropId = (topicId: string) => `topic:${topicId}`;
 
-// Per-topic background gradient — cycles through a palette so each card is distinct.
-const TOPIC_PALETTE = [
-  '#fd87e4', // pink
-  '#fd956e', // peach
-  '#3cbdc8', // teal
-  '#c0b0f7', // lavender
-  '#38ccde', // cyan
-  '#d2faff', // pale
-  '#a58aff', // accent purple
-  '#ff7a90', // coral
-  '#8de2a7', // mint
-  '#f5d76e', // sand
-];
-
-function colorForTopic(order: number): string {
-  return TOPIC_PALETTE[order % TOPIC_PALETTE.length];
-}
 
 export function OwnershipOverview() {
   const topics = useStore((s) => s.topics ?? []);
@@ -88,19 +71,20 @@ export function OwnershipOverview() {
           })}
         </div>
 
-        {/* Topic cards for the active tab */}
+        {/* Topic cards for the active tab — all share the category color */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {tabTopics.map((t, i) => (
-            <TopicCard key={t.id} topic={t} color={colorForTopic(i)} />
+          {tabTopics.map((t) => (
+            <TopicCard key={t.id} topic={t} color={CATEGORY_BY_ID[safeActive].ownershipColor} />
           ))}
+        </div>
 
-          {/* + Add tag tile */}
-          <AddTagTile category={safeActive} onAdd={(name) => addTopic(name, safeActive)} />
-
+        {/* Small + add tag button, below the grid */}
+        <div className="mt-4 flex items-center gap-2">
+          <AddTagButton onAdd={(name) => addTopic(name, safeActive)} />
           {tabTopics.length === 0 && (
-            <p className="col-span-full text-sm italic text-muted">
-              No tags in {CATEGORY_BY_ID[safeActive].label} yet. Use the + tile.
-            </p>
+            <span className="text-sm italic text-muted">
+              No tags in {CATEGORY_BY_ID[safeActive].label} yet. Hit + to add.
+            </span>
           )}
         </div>
       </div>
@@ -108,7 +92,7 @@ export function OwnershipOverview() {
   );
 }
 
-function AddTagTile({ category: _category, onAdd }: { category: Category; onAdd: (name: string) => void }) {
+function AddTagButton({ onAdd }: { onAdd: (name: string) => void }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -133,16 +117,16 @@ function AddTagTile({ category: _category, onAdd }: { category: Category; onAdd:
         }
       }}
       placeholder="new tag…"
-      className="aspect-[5/2] w-full rounded-xl border-2 border-dashed border-accent/60 bg-white/[0.04] px-3 text-sm text-ink outline-none"
+      className="rounded-full border border-accent/60 bg-white/[0.04] px-3 py-1 text-sm text-ink outline-none"
     />
   ) : (
     <button
       type="button"
       onClick={() => setAdding(true)}
-      className="aspect-[5/2] w-full rounded-xl border-2 border-dashed border-white/15 bg-white/[0.02] text-sm text-muted hover:border-accent/60 hover:text-ink"
+      className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-white/15 bg-white/[0.02] text-sm text-muted hover:border-accent/60 hover:text-ink"
       title="Add a new tag in this category"
     >
-      + Add tag
+      +
     </button>
   );
 }
@@ -161,6 +145,19 @@ function TopicCard({ topic, color }: { topic: Topic; color: string }) {
   const [draft, setDraft] = useState(topic.name);
   useEffect(() => setDraft(topic.name), [topic.name]);
 
+  // Close picker on outside click
+  const pickerRootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showPicker) return;
+    const onDown = (e: MouseEvent) => {
+      if (pickerRootRef.current && !pickerRootRef.current.contains(e.target as Node)) {
+        setShowPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [showPicker]);
+
   const owners = topic.pmmIds
     .map((pid) => allPeople.find((p) => p.id === pid))
     .filter((p): p is Person => Boolean(p));
@@ -175,85 +172,89 @@ function TopicCard({ topic, color }: { topic: Topic; color: string }) {
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      className={[
-        'group/card relative aspect-[5/2] overflow-hidden rounded-xl shadow-md transition-all',
-        isOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-canvas' : '',
-      ].join(' ')}
-      style={{
-        background: `radial-gradient(circle at 30% 30%, ${color}, ${darken(color, 0.7)} 80%)`,
-      }}
-    >
-      {/* Topic name (top-left, leaves room for owners on the right) */}
-      <div className="absolute inset-x-2.5 top-2 pr-14">
-        {editing ? (
-          <input
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commitRename}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-              else if (e.key === 'Escape') {
-                setDraft(topic.name);
-                setEditing(false);
-              }
-            }}
-            className="w-full bg-transparent text-xs font-bold leading-tight outline-none"
-            style={{ color: textColor }}
-          />
-        ) : (
-          <h4
-            className="cursor-text text-xs font-bold leading-tight"
-            style={{ color: textColor }}
-            onDoubleClick={() => setEditing(true)}
-            title="Double-click to rename"
-          >
-            {topic.name}
-          </h4>
-        )}
-      </div>
-
-      {/* Delete (top-right) — hover to reveal */}
-      <button
-        type="button"
-        onClick={() => {
-          if (confirm(`Delete tag "${topic.name}"?`)) removeTopic(topic.id);
+    <div ref={pickerRootRef} className="group/card relative">
+      {/* Card body — overflow-hidden clips the gradient to rounded corners */}
+      <div
+        ref={setNodeRef}
+        className={[
+          'relative aspect-[5/2] overflow-hidden rounded-xl shadow-md transition-all',
+          isOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-canvas' : '',
+        ].join(' ')}
+        style={{
+          background: `radial-gradient(circle at 30% 30%, ${color}, ${darken(color, 0.7)} 80%)`,
         }}
-        className="absolute right-1 top-1 z-20 rounded-full px-1 text-xs opacity-0 transition-opacity group-hover/card:opacity-70 hover:!opacity-100"
-        style={{ color: textColor }}
-        title="Delete this tag"
       >
-        ×
-      </button>
+        {/* Topic name (top-left, leaves room for owners on the right) */}
+        <div className="absolute inset-x-2.5 top-2 pr-14">
+          {editing ? (
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                else if (e.key === 'Escape') {
+                  setDraft(topic.name);
+                  setEditing(false);
+                }
+              }}
+              className="w-full bg-transparent text-xs font-bold leading-tight outline-none"
+              style={{ color: textColor }}
+            />
+          ) : (
+            <h4
+              className="cursor-text text-xs font-bold leading-tight"
+              style={{ color: textColor }}
+              onDoubleClick={() => setEditing(true)}
+              title="Double-click to rename"
+            >
+              {topic.name}
+            </h4>
+          )}
+        </div>
 
-      {/* Owner photos (bottom-right, stacked horizontally) */}
-      <div className="absolute bottom-1.5 right-1.5 flex flex-wrap items-center justify-end gap-1">
-        {owners.map((person) => (
-          <DraggableOwner
-            key={person.id}
-            topicId={topic.id}
-            person={person}
-            ringColor={textColor}
-          />
-        ))}
+        {/* Delete (top-right) */}
         <button
           type="button"
-          onClick={() => setShowPicker((v) => !v)}
-          title="Add a PMM to this topic"
-          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed text-xs font-bold transition-transform hover:scale-110"
-          style={{ borderColor: textColor + '99', color: textColor }}
+          onClick={() => {
+            if (confirm(`Delete tag "${topic.name}"?`)) removeTopic(topic.id);
+          }}
+          className="absolute right-1 top-1 z-20 rounded-full px-1 text-xs opacity-0 transition-opacity group-hover/card:opacity-70 hover:!opacity-100"
+          style={{ color: textColor }}
+          title="Delete this tag"
         >
-          +
+          ×
         </button>
+
+        {/* Owner photos (bottom-right) */}
+        <div className="absolute bottom-1.5 right-1.5 flex flex-wrap items-center justify-end gap-1">
+          {owners.map((person) => (
+            <DraggableOwner
+              key={person.id}
+              topicId={topic.id}
+              person={person}
+              ringColor={textColor}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => setShowPicker((v) => !v)}
+            title="Add a PMM to this topic"
+            className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed text-xs font-bold transition-transform hover:scale-110"
+            style={{ borderColor: textColor + '99', color: textColor }}
+          >
+            +
+          </button>
+        </div>
       </div>
 
-      {/* PMM picker — opens when + is clicked */}
+      {/* PMM picker — rendered OUTSIDE the overflow-hidden card so it can
+          extend below freely. Anchored to the right edge of the card. */}
       {showPicker && (
         <div
-          className="absolute right-1.5 top-1.5 z-10 max-h-[180px] w-44 overflow-y-auto rounded-lg border border-white/10 bg-surface p-1.5 shadow-xl"
-          onMouseLeave={() => setShowPicker(false)}
+          className="absolute right-0 top-full z-50 mt-1 max-h-[240px] w-52 overflow-y-auto rounded-lg border border-white/10 bg-surface p-1.5 shadow-xl"
+          style={{ background: 'rgb(var(--surface))' }}
         >
           {available.length === 0 ? (
             <p className="px-2 py-1 text-[11px] italic text-muted">All PMMs are already on this topic.</p>

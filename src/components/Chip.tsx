@@ -44,10 +44,16 @@ export function Chip({ chip, compact = false, hidePrimary = false }: Props) {
     setEditing(false);
   };
 
+  const hex = meta.ownershipColor;
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.4 : 1,
+    // Use the same hex palette as the Topic cards in Ownership view.
+    // Translucent fill so chips read on the dark surface.
+    background: `${hex}26`, // 0x26 ≈ 15% opacity
+    border: `1px solid ${hex}66`, // 40% opacity
+    color: hex,
   };
 
   return (
@@ -55,9 +61,7 @@ export function Chip({ chip, compact = false, hidePrimary = false }: Props) {
       ref={setNodeRef}
       style={style}
       className={[
-        'group inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs',
-        meta.tint,
-        meta.border,
+        'group inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs',
         chip.isPrimary && !hidePrimary ? 'font-semibold ring-1 ring-white/30' : '',
         compact ? 'text-[9px] leading-snug px-1.5 py-[1px]' : '',
         'select-none',

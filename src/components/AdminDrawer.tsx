@@ -627,44 +627,39 @@ function TopicAdminRow({
             </button>
           </span>
         ))}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setPicker((v) => !v)}
-            className="rounded-full border border-dashed border-white/15 px-2 py-0.5 text-[11px] text-muted hover:border-accent/60 hover:text-ink"
-            disabled={available.length === 0}
-            title={available.length === 0 ? 'All PMMs are already on this topic' : 'Add a PMM'}
-          >
-            + PMM
-          </button>
-          {picker && available.length > 0 && (
-            <div
-              className="absolute left-0 top-full z-10 mt-1 max-h-[200px] w-44 overflow-y-auto rounded-lg border border-white/10 bg-surface p-1 shadow-xl"
-              onMouseLeave={() => setPicker(false)}
-            >
-              {available.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    onAddPmm(p.id);
-                    setPicker(false);
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-ink hover:bg-white/5"
-                >
-                  <img
-                    src={resolvePhotoUrl(p.photoUrl) || ''}
-                    alt=""
-                    className="h-5 w-5 rounded-full object-cover"
-                    onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
-                  />
-                  <span className="truncate">{p.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setPicker((v) => !v)}
+          className="rounded-full border border-dashed border-white/15 px-2 py-0.5 text-[11px] text-muted hover:border-accent/60 hover:text-ink disabled:opacity-40"
+          disabled={available.length === 0}
+          title={available.length === 0 ? 'All PMMs are already on this topic' : picker ? 'Close' : 'Add a PMM'}
+        >
+          {picker ? '✓ done' : '+ PMM'}
+        </button>
       </div>
+      {/* Inline picker — no dropdown, no overflow clipping issues */}
+      {picker && available.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {available.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onAddPmm(p.id)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] py-0.5 pl-0.5 pr-2 text-[11px] text-ink hover:border-accent/60 hover:bg-white/[0.08]"
+              title={`Add ${p.name}`}
+            >
+              <img
+                src={resolvePhotoUrl(p.photoUrl) || ''}
+                alt=""
+                className="h-5 w-5 rounded-full object-cover"
+                onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
+              />
+              <span className="truncate">{p.name}</span>
+              <span className="text-accent">+</span>
+            </button>
+          ))}
+        </div>
+      )}
     </li>
   );
 }
