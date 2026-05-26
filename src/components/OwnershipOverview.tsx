@@ -73,7 +73,10 @@ export function OwnershipOverview() {
 function TagsGrid({ category }: { category: Category }) {
   const chips = useStore((s) => s.chips);
   const people = useStore(selectVisiblePeople);
+  const addChip = useStore((s) => s.addChip);
   const meta = CATEGORY_BY_ID[category];
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
 
   // Group chips by their label (case-insensitive). Keep the original casing
   // of the first occurrence for display.
@@ -88,14 +91,50 @@ function TagsGrid({ category }: { category: Category }) {
     a[1].label.localeCompare(b[1].label),
   );
 
+  const commitNew = () => {
+    const v = draft.trim();
+    if (v) addChip(category, null, v);
+    setDraft('');
+    setAdding(false);
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="flex flex-wrap items-start gap-3">
       {groupList.map(([key, group]) => (
         <TagBucket key={key} category={category} labelKey={key} label={group.label} chips={group.chips} people={people} />
       ))}
-      {groupList.length === 0 && (
-        <p className="col-span-full text-sm italic text-muted">
-          No ownership areas yet in {meta.label}. Add chips on the PMM cards below.
+
+      {/* + add tag tile */}
+      {adding ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitNew}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+            else if (e.key === 'Escape') {
+              setDraft('');
+              setAdding(false);
+            }
+          }}
+          placeholder="new tag…"
+          className="self-start rounded-md border border-accent/60 bg-white/[0.04] px-3 py-2 text-sm text-ink outline-none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="self-start rounded-md border border-dashed border-white/15 bg-white/[0.02] px-3 py-2 text-xs text-muted hover:border-accent/60 hover:text-ink"
+          title={`Add a new ownership area in ${meta.label}`}
+        >
+          + Add tag
+        </button>
+      )}
+
+      {groupList.length === 0 && !adding && (
+        <p className="text-sm italic text-muted">
+          No ownership areas yet in {meta.label}. Hit + Add tag.
         </p>
       )}
     </div>
@@ -118,33 +157,84 @@ function TagBucket({
   const dropId = tagBucketDropId(category, labelKey);
   const { setNodeRef, isOver } = useDroppable({ id: dropId, data: { category, labelKey, label } });
   const meta = CATEGORY_BY_ID[category];
+  const renameTag = useStore((s) => s.renameTag);
+  const deleteTag = useStore((s) => s.deleteTag);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(label);
+  useEffect(() => setDraft(label), [label]);
 
-  // Owners for this tag = chips' owner ids (de-duped, ignore null owners)
   const ownerChipPairs = chips
     .filter((c) => c.ownerId !== null)
     .map((c) => ({ chipId: c.id, ownerId: c.ownerId! }));
+
+  const textColor = pickReadableTextColor(meta.ownershipColor);
+
+  const commitRename = () => {
+    const v = draft.trim();
+    if (v && v !== label) renameTag(category, labelKey, v);
+    else setDraft(label);
+    setEditing(false);
+  };
 
   return (
     <div
       ref={setNodeRef}
       className={[
-        'flex flex-col gap-2 rounded-xl p-2.5 transition-all',
+        'group/bucket flex flex-col gap-1.5 rounded-xl p-1 transition-all',
         isOver ? 'bg-white/5 ring-2 ring-accent' : '',
       ].join(' ')}
     >
-      {/* Tag — bold colored rectangle */}
+      {/* Tag — bold colored rectangle, content-width */}
       <div
-        className="rounded-md px-3 py-2 text-sm font-bold leading-tight"
-        style={{
-          backgroundColor: meta.ownershipColor,
-          color: pickReadableTextColor(meta.ownershipColor),
-        }}
+        className="relative inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-bold leading-tight"
+        style={{ backgroundColor: meta.ownershipColor, color: textColor }}
       >
-        {label}
+        {editing ? (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+              else if (e.key === 'Escape') {
+                setDraft(label);
+                setEditing(false);
+              }
+            }}
+            className="min-w-[60px] bg-transparent text-xs font-bold outline-none"
+            style={{ color: textColor, width: `${Math.max(draft.length, 4)}ch` }}
+          />
+        ) : (
+          <span
+            className="cursor-text"
+            onDoubleClick={() => setEditing(true)}
+            title="Double-click to rename"
+          >
+            {label}
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={() => {
+            if (
+              confirm(
+                `Delete the "${label}" tag? This removes ${chips.length} chip(s) across all PMMs in ${meta.label}.`,
+              )
+            )
+              deleteTag(category, labelKey);
+          }}
+          className="ml-1 opacity-0 transition-opacity group-hover/bucket:opacity-70 hover:opacity-100"
+          style={{ color: textColor }}
+          title="Delete tag"
+        >
+          ×
+        </button>
       </div>
 
       {/* Owners — small draggable photo circles */}
-      <div className="flex flex-wrap items-center gap-1.5 pl-1 min-h-[36px]">
+      <div className="flex flex-wrap items-center gap-1 pl-0.5 min-h-[28px]">
         {ownerChipPairs.length === 0 ? (
           <span className="text-[10px] italic text-muted">—</span>
         ) : (

@@ -12,6 +12,9 @@ type Actions = {
   moveChip: (chipId: string, opts: { ownerId: string | null; category?: Category; targetIndex?: number }) => void;
   toggleChipPrimary: (chipId: string) => void;
   reorderChip: (chipId: string, targetIndex: number) => void;
+  // Bulk tag ops (in Ownership-by-topic view a "tag" = one label across all chips with that category)
+  renameTag: (category: Category, oldLabelKey: string, newLabel: string) => void;
+  deleteTag: (category: Category, labelKey: string) => void;
 
   // Person operations
   addPerson: (name: string) => string;
@@ -183,6 +186,25 @@ export const useStore = create<Store>()(
         if (!chip) return;
         get().moveChip(chipId, { ownerId: chip.ownerId, category: chip.category, targetIndex });
       },
+
+      renameTag: (category, oldLabelKey, newLabel) => {
+        const v = newLabel.trim();
+        if (!v) return;
+        set((state) => ({
+          chips: state.chips.map((c) =>
+            c.category === category && c.label.trim().toLowerCase() === oldLabelKey
+              ? { ...c, label: v }
+              : c,
+          ),
+        }));
+      },
+
+      deleteTag: (category, labelKey) =>
+        set((state) => ({
+          chips: state.chips.filter(
+            (c) => !(c.category === category && c.label.trim().toLowerCase() === labelKey),
+          ),
+        })),
 
       addPerson: (name) => {
         const id = `p_${nanoid(6)}`;

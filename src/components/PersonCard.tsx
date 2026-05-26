@@ -22,9 +22,10 @@ export function PersonCard({ person }: Props) {
 
   return (
     <div className="card-gradient group">
-      <article className="card-gradient-inner relative flex flex-col p-6">
+      <article className="card-gradient-inner relative flex min-h-[560px] flex-col p-8">
         {/* Header */}
-        <div className="flex items-start gap-4">
+        <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+          <AvatarEditor person={person} size={80} className="shrink-0" />
           <div className="min-w-0 flex-1">
             {editingName ? (
               <input
@@ -43,11 +44,11 @@ export function PersonCard({ person }: Props) {
                     setEditingName(false);
                   }
                 }}
-                className="w-full bg-transparent text-2xl font-semibold text-ink outline-none border-b border-accent/40"
+                className="w-full bg-transparent text-3xl font-semibold text-ink outline-none border-b border-accent/40"
               />
             ) : (
               <h3
-                className="cursor-text truncate text-2xl font-semibold leading-tight text-ink"
+                className="cursor-text truncate text-3xl font-semibold leading-tight text-ink"
                 onDoubleClick={() => setEditingName(true)}
                 title="Double-click to rename"
               >
@@ -55,7 +56,6 @@ export function PersonCard({ person }: Props) {
               </h3>
             )}
           </div>
-          <AvatarEditor person={person} size={56} className="shrink-0" />
           <button
             type="button"
             onClick={() => {
@@ -68,8 +68,8 @@ export function PersonCard({ person }: Props) {
           </button>
         </div>
 
-        {/* Sections */}
-        <div className="mt-6 flex flex-col gap-3">
+        {/* Sections — 2 columns on wider widths so content fills the card */}
+        <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
           {visibleCategories.map((cat) => (
             <CardSection
               key={cat.id}

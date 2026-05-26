@@ -37,24 +37,15 @@ export function SubTeamsCanvas() {
         </button>
         <button
           type="button"
-          onClick={() => addSubTeam('New cross-cut pod', 'crossCut')}
+          onClick={() => addSubTeam('New cross pod', 'crossCut')}
           className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
-          title="Add a cross-cutting pod that spans across the others"
+          title="Add a cross pod that spans below the others"
         >
-          + Cross-cut
+          + Cross
         </button>
       </div>
 
       <UnassignedPool people={unassigned} />
-
-      {/* Cross-cut pods: full-width thinner bars */}
-      {crossCut.length > 0 && (
-        <div className="mt-5 flex flex-col gap-3">
-          {crossCut.map((st) => (
-            <CrossCutBar key={st.id} subTeam={st} people={people} />
-          ))}
-        </div>
-      )}
 
       {/* Normal pods: 4-col grid */}
       {normal.length === 0 && crossCut.length === 0 ? (
@@ -68,6 +59,15 @@ export function SubTeamsCanvas() {
           ))}
         </div>
       ) : null}
+
+      {/* Cross pods: full-width thinner bars BELOW the normal grid */}
+      {crossCut.length > 0 && (
+        <div className="mt-5 flex flex-col gap-3">
+          {crossCut.map((st) => (
+            <CrossCutBar key={st.id} subTeam={st} people={people} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -131,23 +131,17 @@ function CrossCutBar({ subTeam, people }: { subTeam: SubTeam; people: Person[] }
 
   return (
     <article className="card-gradient">
-      <div className="card-gradient-inner flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
-        {/* Cross-cut badge + title */}
-        <div className="flex min-w-[160px] items-center gap-2">
-          <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-canvas"
-            style={{ background: 'rgb(var(--accent))' }}
-          >
-            Cross-cut
-          </span>
+      <div className="card-gradient-inner flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-3">
+        {/* Title (no badge) */}
+        <div className="flex min-w-[200px] flex-1 items-center gap-2">
           <PodHeader subTeam={subTeam} inline />
         </div>
 
         {/* Lead slot inline */}
         <CrossCutSlot label="Lead" subTeamId={subTeam.id} kind="manager" person={manager} />
 
-        {/* Members area inline */}
-        <CrossCutSlot label="Members" subTeamId={subTeam.id} kind="members" people={members} />
+        {/* Members area inline (no MEMBERS label) */}
+        <CrossCutSlot label="" subTeamId={subTeam.id} kind="members" people={members} />
 
         {/* Tags inline */}
         <div className="flex items-center gap-2">
@@ -155,7 +149,7 @@ function CrossCutBar({ subTeam, people }: { subTeam: SubTeam; people: Person[] }
         </div>
 
         {/* Goal inline */}
-        <div className="flex-1 min-w-[200px]">
+        <div className="min-w-[180px] flex-1">
           <SharedGoal subTeam={subTeam} dense />
         </div>
       </div>
@@ -286,7 +280,9 @@ function CrossCutSlot(
   const { setNodeRef, isOver } = useDroppable({ id: dropId });
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">{props.label}</span>
+      {props.label && (
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">{props.label}</span>
+      )}
       <div
         ref={setNodeRef}
         className={[
@@ -331,13 +327,17 @@ function TagRow({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean 
       {tags.map((t, i) => (
         <span
           key={`${t}-${i}`}
-          className="group inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.05] px-1.5 py-px text-[7px] uppercase tracking-wide text-ink"
+          className="group inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[8px] font-medium uppercase tracking-wide text-white"
+          style={{
+            background: 'linear-gradient(135deg, rgba(165,138,255,0.45), rgba(99,102,241,0.45))',
+            border: '1px solid rgba(165,138,255,0.5)',
+          }}
         >
           {t}
           <button
             type="button"
             onClick={() => removeSubTeamTag(subTeam.id, i)}
-            className="opacity-0 transition-opacity group-hover:opacity-60 hover:opacity-100"
+            className="opacity-0 transition-opacity group-hover:opacity-80 hover:opacity-100"
             title="Remove tag"
           >
             ×
@@ -358,13 +358,13 @@ function TagRow({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean 
             }
           }}
           placeholder="tag…"
-          className="w-20 rounded-full border border-accent/40 bg-white/[0.04] px-1.5 py-px text-[8px] text-ink outline-none"
+          className="w-20 rounded-full border border-accent/40 bg-white/[0.04] px-1.5 py-px text-[8px] text-white outline-none"
         />
       ) : (
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="rounded-full border border-dashed border-white/15 px-1.5 py-px text-[8px] text-muted hover:border-accent/60 hover:text-ink"
+          className="rounded-full border border-dashed border-accent/40 px-1.5 py-px text-[8px] text-muted hover:border-accent hover:text-ink"
           title="Add tag (deliverable / focus / output)"
         >
           + tag
@@ -382,7 +382,7 @@ function SharedGoal({ subTeam, dense = false }: { subTeam: SubTeam; dense?: bool
 
   return (
     <div className={['flex items-baseline gap-2', dense ? '' : ''].join(' ')}>
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted shrink-0">
+      <span className="shrink-0 text-[7px] font-semibold uppercase tracking-wide text-muted">
         Shared goal
       </span>
       {editing ? (
@@ -402,11 +402,11 @@ function SharedGoal({ subTeam, dense = false }: { subTeam: SubTeam; dense?: bool
             }
           }}
           placeholder="short text…"
-          className="flex-1 bg-transparent text-[8px] text-ink outline-none border-b border-accent/40"
+          className="flex-1 bg-transparent text-[7px] text-white outline-none border-b border-accent/40"
         />
       ) : (
         <span
-          className="cursor-text flex-1 truncate text-[8px] text-ink"
+          className="flex-1 cursor-text truncate text-[7px] text-white"
           onDoubleClick={() => setEditing(true)}
           title="Double-click to edit"
         >

@@ -66,35 +66,38 @@ export function About() {
       </div>
 
       {/* Dots + add/remove controls */}
-      <div className="mt-4 flex items-center justify-center gap-2">
-        {about.map((_, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => setActive(i)}
-            aria-label={`Go to slide ${i + 1}`}
-            className={[
-              'h-2 rounded-full transition-all',
-              i === active ? 'w-8 bg-accent' : 'w-2 bg-white/20 hover:bg-white/40',
-            ].join(' ')}
-          />
-        ))}
+      <div className="mt-4 flex items-center justify-center gap-3">
+        <div className="flex items-center gap-2">
+          {about.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={`Go to slide ${i + 1}`}
+              className={[
+                'h-2 rounded-full transition-all',
+                i === active ? 'w-8 bg-accent' : 'w-2 bg-white/20 hover:bg-white/40',
+              ].join(' ')}
+            />
+          ))}
+        </div>
+        <div className="mx-2 h-4 w-px bg-white/15" />
         <button
           type="button"
           onClick={onAdd}
           title="Add a slide"
-          className="ml-2 flex h-5 w-5 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs text-muted hover:border-accent/60 hover:text-ink"
+          className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-accent hover:border-accent hover:bg-accent/20"
         >
-          +
+          + Add slide
         </button>
         {image?.dataUrl && (
           <button
             type="button"
             onClick={onRemove}
             title="Remove this slide"
-            className="flex h-5 w-5 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs text-muted hover:border-rose-400/60 hover:text-rose-300"
+            className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-xs text-muted hover:border-rose-400/60 hover:text-rose-300"
           >
-            ×
+            × Remove
           </button>
         )}
       </div>
