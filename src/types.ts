@@ -45,6 +45,12 @@ export type SubTeam = {
   managerId: string | null;
   memberIds: string[]; // does NOT include managerId
   order: number;
+  /** A 'crossCut' pod renders as a full-width thinner bar above the normal pods. */
+  kind?: 'normal' | 'crossCut';
+  /** Short free-text "shared goal" line, shown at the bottom of the pod. */
+  goalText?: string;
+  /** Small tags for key deliverables / focuses / outputs. */
+  tags?: string[];
 };
 
 export type AppState = {

@@ -5,11 +5,6 @@ import { useStore, selectVisiblePeople } from '../store';
 import { resolvePhotoUrl } from '../lib/photo';
 import type { Person, SubTeam } from '../types';
 
-/**
- * Professional pods canvas — drag PMM photos into sub-team boxes.
- * Each sub-team has a manager slot + members area, plus an editable title.
- */
-
 const UNASSIGNED_DROP_ID = 'subteam:unassigned';
 const subteamMembersDropId = (id: string) => `subteam-members:${id}`;
 const subteamManagerDropId = (id: string) => `subteam-manager:${id}`;
@@ -17,11 +12,14 @@ const memberDragId = (personId: string) => `member:${personId}`;
 
 export function SubTeamsCanvas() {
   const people = useStore(selectVisiblePeople);
-  const subTeams = useStore((s) => s.subTeams ?? []);
+  const allPods = useStore((s) => s.subTeams ?? []);
   const addSubTeam = useStore((s) => s.addSubTeam);
 
+  const crossCut = allPods.filter((p) => p.kind === 'crossCut');
+  const normal = allPods.filter((p) => p.kind !== 'crossCut');
+
   const assignedIds = new Set(
-    subTeams.flatMap((s) => [s.managerId, ...s.memberIds].filter((x): x is string => Boolean(x))),
+    allPods.flatMap((s) => [s.managerId, ...s.memberIds].filter((x): x is string => Boolean(x))),
   );
   const unassigned = people.filter((p) => !assignedIds.has(p.id));
 
@@ -32,26 +30,44 @@ export function SubTeamsCanvas() {
         <button
           type="button"
           onClick={() => addSubTeam()}
-          className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-sm text-muted hover:border-accent/60 hover:text-ink"
-          title="Add sub-team"
+          className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
+          title="Add a pod"
         >
-          +
+          + Pod
+        </button>
+        <button
+          type="button"
+          onClick={() => addSubTeam('New cross-cut pod', 'crossCut')}
+          className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
+          title="Add a cross-cutting pod that spans across the others"
+        >
+          + Cross-cut
         </button>
       </div>
 
       <UnassignedPool people={unassigned} />
 
-      {subTeams.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center text-sm italic text-muted">
-          No sub-teams yet. Hit the + to create one.
-        </div>
-      ) : (
-        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {subTeams.map((st) => (
-            <SubTeamBox key={st.id} subTeam={st} people={people} />
+      {/* Cross-cut pods: full-width thinner bars */}
+      {crossCut.length > 0 && (
+        <div className="mt-5 flex flex-col gap-3">
+          {crossCut.map((st) => (
+            <CrossCutBar key={st.id} subTeam={st} people={people} />
           ))}
         </div>
       )}
+
+      {/* Normal pods: 4-col grid */}
+      {normal.length === 0 && crossCut.length === 0 ? (
+        <div className="mt-5 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center text-sm italic text-muted">
+          No pods yet. Hit + Pod to create one.
+        </div>
+      ) : normal.length > 0 ? (
+        <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {normal.map((st) => (
+            <PodBox key={st.id} subTeam={st} people={people} />
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -60,7 +76,6 @@ function UnassignedPool({ people }: { people: Person[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: UNASSIGNED_DROP_ID });
   const isEmpty = people.length === 0;
 
-  // When empty, show a tiny strip — collapses to a single line.
   return (
     <div
       ref={setNodeRef}
@@ -72,7 +87,7 @@ function UnassignedPool({ people }: { people: Person[] }) {
     >
       <p className={['text-xs font-semibold uppercase tracking-wide text-muted', isEmpty ? '' : 'mb-3'].join(' ')}>
         Unassigned <span className="ml-1 normal-case text-muted/60">({people.length})</span>
-        {isEmpty && <span className="ml-2 normal-case text-muted/60 italic">— everyone assigned</span>}
+        {isEmpty && <span className="ml-2 normal-case italic text-muted/60">— everyone assigned</span>}
       </p>
       {!isEmpty && (
         <div className="flex flex-wrap gap-2">
@@ -85,104 +100,137 @@ function UnassignedPool({ people }: { people: Person[] }) {
   );
 }
 
-function SubTeamBox({ subTeam, people }: { subTeam: SubTeam; people: Person[] }) {
-  const updateSubTeamTitle = useStore((s) => s.updateSubTeamTitle);
-  const removeSubTeam = useStore((s) => s.removeSubTeam);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(subTeam.title);
-  const [labelText, setLabelText] = useState<string>(getLabel(subTeam.id));
-  const [editingLabel, setEditingLabel] = useState(false);
-
-  useEffect(() => setDraft(subTeam.title), [subTeam.title]);
-
-  const manager = subTeam.managerId
-    ? people.find((p) => p.id === subTeam.managerId) ?? null
-    : null;
+/** Normal pod — 4-col grid card. */
+function PodBox({ subTeam, people }: { subTeam: SubTeam; people: Person[] }) {
+  const manager = subTeam.managerId ? people.find((p) => p.id === subTeam.managerId) ?? null : null;
   const members = subTeam.memberIds
     .map((id) => people.find((p) => p.id === id))
     .filter((p): p is Person => Boolean(p));
 
   return (
     <article className="card-gradient">
-      <div className="card-gradient-inner flex min-h-[280px] flex-col gap-4 p-5">
-      {/* Header — title + editable label + delete */}
-      <div className="flex items-start gap-2">
-        <div className="flex-1">
-          {editingLabel ? (
-            <input
-              autoFocus
-              value={labelText}
-              onChange={(e) => setLabelText(e.target.value)}
-              onBlur={() => {
-                saveLabel(subTeam.id, labelText.trim() || 'Shared goal');
-                setEditingLabel(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-                else if (e.key === 'Escape') {
-                  setLabelText(getLabel(subTeam.id));
-                  setEditingLabel(false);
-                }
-              }}
-              className="block bg-transparent text-[11px] font-semibold uppercase tracking-wide text-muted outline-none border-b border-indigo-200"
-            />
-          ) : (
-            <span
-              className="cursor-text text-[11px] font-semibold uppercase tracking-wide text-muted"
-              onDoubleClick={() => setEditingLabel(true)}
-              title="Double-click to edit label"
-            >
-              {labelText}
-            </span>
-          )}
-          {editing ? (
-            <input
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={() => {
-                if (draft.trim()) updateSubTeamTitle(subTeam.id, draft.trim());
-                else setDraft(subTeam.title);
-                setEditing(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-                else if (e.key === 'Escape') {
-                  setDraft(subTeam.title);
-                  setEditing(false);
-                }
-              }}
-              className="block w-full bg-transparent text-lg font-semibold text-ink outline-none border-b border-indigo-300"
-            />
-          ) : (
-            <h3
-              className="cursor-text text-lg font-semibold text-ink"
-              onDoubleClick={() => setEditing(true)}
-              title="Double-click to edit"
-            >
-              {subTeam.title}
-            </h3>
-          )}
+      <div className="card-gradient-inner flex min-h-[360px] flex-col gap-4 p-5">
+        <PodHeader subTeam={subTeam} />
+        <ManagerSlot subTeamId={subTeam.id} manager={manager} />
+        <MembersArea subTeamId={subTeam.id} members={members} />
+        <div className="mt-auto flex flex-col gap-2 pt-2">
+          <TagRow subTeam={subTeam} />
+          <SharedGoal subTeam={subTeam} />
         </div>
+      </div>
+    </article>
+  );
+}
+
+/** Cross-cut pod — full-width thinner horizontal bar. */
+function CrossCutBar({ subTeam, people }: { subTeam: SubTeam; people: Person[] }) {
+  const manager = subTeam.managerId ? people.find((p) => p.id === subTeam.managerId) ?? null : null;
+  const members = subTeam.memberIds
+    .map((id) => people.find((p) => p.id === id))
+    .filter((p): p is Person => Boolean(p));
+
+  return (
+    <article className="card-gradient">
+      <div className="card-gradient-inner flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
+        {/* Cross-cut badge + title */}
+        <div className="flex min-w-[160px] items-center gap-2">
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-canvas"
+            style={{ background: 'rgb(var(--accent))' }}
+          >
+            Cross-cut
+          </span>
+          <PodHeader subTeam={subTeam} inline />
+        </div>
+
+        {/* Lead slot inline */}
+        <CrossCutSlot label="Lead" subTeamId={subTeam.id} kind="manager" person={manager} />
+
+        {/* Members area inline */}
+        <CrossCutSlot label="Members" subTeamId={subTeam.id} kind="members" people={members} />
+
+        {/* Tags inline */}
+        <div className="flex items-center gap-2">
+          <TagRow subTeam={subTeam} dense />
+        </div>
+
+        {/* Goal inline */}
+        <div className="flex-1 min-w-[200px]">
+          <SharedGoal subTeam={subTeam} dense />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function PodHeader({ subTeam, inline = false }: { subTeam: SubTeam; inline?: boolean }) {
+  const updateSubTeamTitle = useStore((s) => s.updateSubTeamTitle);
+  const removeSubTeam = useStore((s) => s.removeSubTeam);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(subTeam.title);
+  useEffect(() => setDraft(subTeam.title), [subTeam.title]);
+
+  const titleClass = inline ? 'text-base font-semibold text-ink' : 'text-lg font-semibold text-ink';
+
+  return (
+    <div className={inline ? 'flex flex-1 items-center gap-2' : 'flex items-start gap-2'}>
+      <div className="flex-1">
+        {editing ? (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => {
+              if (draft.trim()) updateSubTeamTitle(subTeam.id, draft.trim());
+              else setDraft(subTeam.title);
+              setEditing(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+              else if (e.key === 'Escape') {
+                setDraft(subTeam.title);
+                setEditing(false);
+              }
+            }}
+            className={`block w-full bg-transparent ${titleClass} outline-none border-b border-accent/40`}
+          />
+        ) : (
+          <h3
+            className={`${titleClass} cursor-text`}
+            onDoubleClick={() => setEditing(true)}
+            title="Double-click to edit"
+          >
+            {subTeam.title}
+          </h3>
+        )}
+      </div>
+      {!inline && (
         <button
           type="button"
           onClick={() => {
-            if (confirm(`Remove sub-team "${subTeam.title}"?`)) removeSubTeam(subTeam.id);
+            if (confirm(`Remove pod "${subTeam.title}"?`)) removeSubTeam(subTeam.id);
           }}
-          className="rounded-full px-2 py-0.5 text-sm text-muted hover:bg-rose-50 hover:text-rose-600"
-          title="Remove sub-team"
+          className="rounded-full px-2 py-0.5 text-sm text-muted hover:bg-rose-500/15 hover:text-rose-300"
+          title="Remove pod"
         >
           ×
         </button>
-      </div>
-
-      {/* Manager slot */}
-      <ManagerSlot subTeamId={subTeam.id} manager={manager} />
-
-      {/* Members area */}
-      <MembersArea subTeamId={subTeam.id} members={members} />
-      </div>
-    </article>
+      )}
+      {inline && (
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm(`Remove pod "${subTeam.title}"?`)) removeSubTeam(subTeam.id);
+          }}
+          className="rounded-full px-1.5 text-xs text-muted hover:text-rose-300"
+          title="Remove pod"
+        >
+          ×
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -227,6 +275,150 @@ function MembersArea({ subTeamId, members }: { subTeamId: string; members: Perso
   );
 }
 
+/** Compact slot used in the cross-cut horizontal layout. */
+function CrossCutSlot(
+  props:
+    | { label: string; subTeamId: string; kind: 'manager'; person: Person | null }
+    | { label: string; subTeamId: string; kind: 'members'; people: Person[] },
+) {
+  const dropId =
+    props.kind === 'manager' ? subteamManagerDropId(props.subTeamId) : subteamMembersDropId(props.subTeamId);
+  const { setNodeRef, isOver } = useDroppable({ id: dropId });
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">{props.label}</span>
+      <div
+        ref={setNodeRef}
+        className={[
+          'flex min-h-[36px] items-center gap-1.5 rounded-xl border border-dashed px-2 py-1',
+          isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10',
+        ].join(' ')}
+      >
+        {props.kind === 'manager' ? (
+          props.person ? (
+            <PhotoChip person={props.person} />
+          ) : (
+            <span className="text-[10px] italic text-muted px-1">Drop lead</span>
+          )
+        ) : props.people.length === 0 ? (
+          <span className="text-[10px] italic text-muted px-1">Drop members</span>
+        ) : (
+          props.people.map((p) => <PhotoChip key={p.id} person={p} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function TagRow({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean }) {
+  const addSubTeamTag = useStore((s) => s.addSubTeamTag);
+  const removeSubTeamTag = useStore((s) => s.removeSubTeamTag);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const tags = subTeam.tags ?? [];
+
+  const commit = () => {
+    const v = draft.trim();
+    if (v) addSubTeamTag(subTeam.id, v);
+    setDraft('');
+    setAdding(false);
+  };
+
+  return (
+    <div className={['flex flex-wrap items-center gap-1', dense ? '' : ''].join(' ')}>
+      {tags.map((t, i) => (
+        <span
+          key={`${t}-${i}`}
+          className="group inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/[0.05] px-1.5 py-px text-[7px] uppercase tracking-wide text-ink"
+        >
+          {t}
+          <button
+            type="button"
+            onClick={() => removeSubTeamTag(subTeam.id, i)}
+            className="opacity-0 transition-opacity group-hover:opacity-60 hover:opacity-100"
+            title="Remove tag"
+          >
+            ×
+          </button>
+        </span>
+      ))}
+      {adding ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+            else if (e.key === 'Escape') {
+              setDraft('');
+              setAdding(false);
+            }
+          }}
+          placeholder="tag…"
+          className="w-20 rounded-full border border-accent/40 bg-white/[0.04] px-1.5 py-px text-[8px] text-ink outline-none"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="rounded-full border border-dashed border-white/15 px-1.5 py-px text-[8px] text-muted hover:border-accent/60 hover:text-ink"
+          title="Add tag (deliverable / focus / output)"
+        >
+          + tag
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SharedGoal({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean }) {
+  const setSubTeamGoalText = useStore((s) => s.setSubTeamGoalText);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(subTeam.goalText ?? '');
+  useEffect(() => setDraft(subTeam.goalText ?? ''), [subTeam.goalText]);
+
+  return (
+    <div className={['flex items-baseline gap-2', dense ? '' : ''].join(' ')}>
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-muted shrink-0">
+        Shared goal
+      </span>
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            setSubTeamGoalText(subTeam.id, draft.trim());
+            setEditing(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+            else if (e.key === 'Escape') {
+              setDraft(subTeam.goalText ?? '');
+              setEditing(false);
+            }
+          }}
+          placeholder="short text…"
+          className="flex-1 bg-transparent text-[8px] text-ink outline-none border-b border-accent/40"
+        />
+      ) : (
+        <span
+          className="cursor-text flex-1 truncate text-[8px] text-ink"
+          onDoubleClick={() => setEditing(true)}
+          title="Double-click to edit"
+        >
+          {subTeam.goalText || <span className="italic text-muted">add a short goal…</span>}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
 function PhotoChip({ person, size = 'md' }: { person: Person; size?: 'md' | 'lg' }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: memberDragId(person.id),
@@ -255,6 +447,7 @@ function PhotoChip({ person, size = 'md' }: { person: Person; size?: 'md' | 'lg'
             alt={person.name}
             className="h-full w-full object-cover"
             onError={() => setImgFailed(true)}
+            draggable={false}
           />
         ) : (
           <div
@@ -282,28 +475,5 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-// Per-subteam editable label storage (small, separate from main state to avoid migration friction).
-const LABEL_STORAGE_KEY = 'team-plan-view-subteam-labels-v1';
-function getLabel(subTeamId: string): string {
-  try {
-    const raw = localStorage.getItem(LABEL_STORAGE_KEY);
-    if (!raw) return 'Shared goal';
-    const map = JSON.parse(raw) as Record<string, string>;
-    return map[subTeamId] ?? 'Shared goal';
-  } catch {
-    return 'Shared goal';
-  }
-}
-function saveLabel(subTeamId: string, text: string) {
-  try {
-    const raw = localStorage.getItem(LABEL_STORAGE_KEY);
-    const map = raw ? (JSON.parse(raw) as Record<string, string>) : {};
-    map[subTeamId] = text;
-    localStorage.setItem(LABEL_STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // ignore
-  }
-}
-
-// Expose the drop IDs for App.tsx to decode
+// Expose drop IDs for App.tsx to decode
 export { UNASSIGNED_DROP_ID, subteamMembersDropId, subteamManagerDropId, memberDragId };

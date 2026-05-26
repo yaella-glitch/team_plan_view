@@ -37,11 +37,14 @@ type Actions = {
   removeLatestItem: (id: string) => void;
 
   // Sub-teams
-  addSubTeam: (title?: string) => string;
+  addSubTeam: (title?: string, kind?: 'normal' | 'crossCut') => string;
   updateSubTeamTitle: (id: string, title: string) => void;
   removeSubTeam: (id: string) => void;
   moveMemberToSubTeam: (personId: string, subTeamId: string | null) => void;
   setSubTeamManager: (subTeamId: string, personId: string | null) => void;
+  setSubTeamGoalText: (id: string, text: string) => void;
+  addSubTeamTag: (id: string, tag: string) => void;
+  removeSubTeamTag: (id: string, tagIndex: number) => void;
 
   // Bulk
   replaceState: (s: AppState) => void;
@@ -289,7 +292,7 @@ export const useStore = create<Store>()(
         set((state) => ({ latest: (state.latest ?? []).filter((i) => i.id !== id) })),
 
       // Sub-teams
-      addSubTeam: (title = 'New sub-team') => {
+      addSubTeam: (title = 'New pod', kind = 'normal') => {
         const id = nanoid(8);
         set((state) => ({
           subTeams: [
@@ -300,6 +303,9 @@ export const useStore = create<Store>()(
               managerId: null,
               memberIds: [],
               order: (state.subTeams ?? []).length,
+              kind,
+              goalText: '',
+              tags: [],
             },
           ],
         }));
@@ -324,6 +330,25 @@ export const useStore = create<Store>()(
               };
             }
             return { ...s, managerId: cleanedManager, memberIds: cleanedMembers };
+          }),
+        })),
+      setSubTeamGoalText: (id, text) =>
+        set((state) => ({
+          subTeams: (state.subTeams ?? []).map((s) => (s.id === id ? { ...s, goalText: text } : s)),
+        })),
+      addSubTeamTag: (id, tag) =>
+        set((state) => ({
+          subTeams: (state.subTeams ?? []).map((s) =>
+            s.id === id ? { ...s, tags: [...(s.tags ?? []), tag] } : s,
+          ),
+        })),
+      removeSubTeamTag: (id, tagIndex) =>
+        set((state) => ({
+          subTeams: (state.subTeams ?? []).map((s) => {
+            if (s.id !== id) return s;
+            const next = [...(s.tags ?? [])];
+            next.splice(tagIndex, 1);
+            return { ...s, tags: next };
           }),
         })),
       setSubTeamManager: (subTeamId, personId) =>
