@@ -73,12 +73,13 @@ export const CATEGORY_BY_ID: Record<Category, CategoryMeta> = Object.fromEntries
   CATEGORIES.map((c) => [c.id, c]),
 ) as Record<Category, CategoryMeta>;
 
-/** Subset of categories that show up as tabs in the Ownership-by-topic view.
- *  Order matches Yaella's spec: PMM focus, Persona, Channels, Business KPI, Agentic flow. */
+/** Categories that show up as tabs in the Ownership-by-topic view.
+ *  Order: PMM focus, Persona, Channels, Product focal, Business KPI, Agentic flow. */
 export const TOPIC_TAB_CATEGORIES: Category[] = [
   'pmmFocus',
   'persona',
   'channels',
+  'productFocal',
   'businessKpi',
   'agenticFlow',
 ];
