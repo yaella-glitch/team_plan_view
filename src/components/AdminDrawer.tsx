@@ -10,14 +10,16 @@ export function AdminDrawer() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed right-4 top-4 z-30 flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur hover:bg-white/10"
-        title="Open admin panel"
-      >
-        ⚙ Admin
-      </button>
+      <div className="mx-auto max-w-7xl px-8 pb-10 pt-4 text-center">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-muted hover:border-accent/40 hover:text-ink"
+          title="Open admin panel"
+        >
+          ⚙ Admin
+        </button>
+      </div>
 
       {open && <Drawer onClose={() => setOpen(false)} />}
     </>

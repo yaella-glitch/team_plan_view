@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useStore } from '../store';
+import { useStore, selectVisiblePeople } from '../store';
 import { PersonCard } from './PersonCard';
 import { resolvePhotoUrl } from '../lib/photo';
 import type { Person } from '../types';
@@ -9,15 +9,15 @@ import type { Person } from '../types';
 const personDragId = (id: string) => `person:${id}`;
 
 export function CardsCanvas() {
-  // Show ALL people here (including hidden ones) so this view doubles as the
-  // place to flip visibility on/off without going into Admin.
-  const allPeople = useStore((s) => s.people);
-  const togglePersonEnabled = useStore((s) => s.togglePersonEnabled);
+  // Public view — disabled people are hidden (toggled in Admin).
+  const visiblePeople = useStore(selectVisiblePeople);
   const people = useMemo(
-    () => [...allPeople].sort((a, b) => a.order - b.order),
-    [allPeople],
+    () => [...visiblePeople].sort((a, b) => a.order - b.order),
+    [visiblePeople],
   );
+  // selectVisiblePeople is already sorted by order — re-sort for safety.
   const [selectedId, setSelectedId] = useState<string | null>(people[0]?.id ?? null);
+  // Used to be passed through to PhotoTile; no longer needed but keep the import safe.
 
   useEffect(() => {
     if (people.length === 0) {
@@ -50,7 +50,6 @@ export function CardsCanvas() {
                     person={p}
                     active={p.id === selectedId}
                     onSelect={() => setSelectedId(p.id)}
-                    onToggle={() => togglePersonEnabled(p.id)}
                   />
                 ))}
               </ul>
@@ -77,12 +76,10 @@ function PhotoTile({
   person,
   active,
   onSelect,
-  onToggle,
 }: {
   person: Person;
   active: boolean;
   onSelect: () => void;
-  onToggle: () => void;
 }) {
   const photo = resolvePhotoUrl(person.photoUrl);
   const [imgFailed, setImgFailed] = useState(false);
@@ -157,43 +154,9 @@ function PhotoTile({
         </span>
       </div>
 
-      {/* Visibility toggle — top-right, not part of the drag handle. */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-        title={enabled ? 'Hide from views (Ownership, Pods)' : 'Show in views'}
-        className={[
-          'absolute right-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded-full text-[10px] shadow transition-all',
-          enabled
-            ? 'bg-black/60 text-white/70 opacity-0 hover:text-white group-hover:opacity-100'
-            : 'bg-rose-500/80 text-white opacity-100',
-        ].join(' ')}
-      >
-        {enabled ? eyeOn : eyeOff}
-      </button>
     </li>
   );
 }
-
-const eyeOn = (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
-
-const eyeOff = (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-6.5 0-10-7-10-7a19.78 19.78 0 0 1 4.06-5.94" />
-    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c6.5 0 10 7 10 7a19.71 19.71 0 0 1-2.16 3.19" />
-    <path d="M1 1l22 22" />
-    <path d="M14.12 14.12A3 3 0 0 1 9.88 9.88" />
-  </svg>
-);
 
 function initials(name: string): string {
   return name

@@ -121,9 +121,6 @@ function Slide({
             <span className="text-sm italic">{placeholder}</span>
           </div>
         )}
-        <span className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-black/60 to-transparent px-4 py-2 text-sm font-medium text-white opacity-0 transition-all group-hover:translate-y-0 group-hover:opacity-100">
-          Click to {image?.dataUrl ? 'replace' : 'upload'} image
-        </span>
       </button>
       <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
       </div>

@@ -140,7 +140,6 @@ export default function App() {
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
-      <AdminDrawer />
       <main>
         <Hero />
         <About />
@@ -149,6 +148,7 @@ export default function App() {
         <CardsCanvas />
         <SubTeamsCanvas />
         <Backlog />
+        <AdminDrawer />
       </main>
 
       <DragOverlay>

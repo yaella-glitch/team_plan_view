@@ -91,11 +91,6 @@ export function Hero() {
                 </div>
               </div>
             )}
-            {heroImage && (
-              <span className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                Click to replace
-              </span>
-            )}
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
         </div>
