@@ -33,6 +33,7 @@ export default function App() {
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
+  const [activeOwnershipChipId, setActiveOwnershipChipId] = useState<string | null>(null);
 
   // Apply the (possibly-customized) palette to CSS variables on mount and whenever it changes.
   useEffect(() => {
@@ -50,6 +51,9 @@ export default function App() {
       if (personId) setActiveMemberId(personId);
     } else if (idStr.startsWith('person:')) {
       setActivePersonId(idStr.slice('person:'.length));
+    } else if (idStr.startsWith('ownership-chip:')) {
+      const chipId = e.active.data.current?.chipId as string | undefined;
+      if (chipId) setActiveOwnershipChipId(chipId);
     }
   };
 
@@ -57,6 +61,7 @@ export default function App() {
     setActiveChipId(null);
     setActiveMemberId(null);
     setActivePersonId(null);
+    setActiveOwnershipChipId(null);
     if (!e.over) return;
     const activeIdStr = String(e.active.id);
     const overIdStr = String(e.over.id);
@@ -87,6 +92,33 @@ export default function App() {
         moveChip(chipId, { ownerId: dest.ownerId, category: dest.category });
       } else if (dest.kind === 'backlog') {
         moveChip(chipId, { ownerId: null, category: chip.category });
+      }
+      return;
+    }
+
+    // CASE: Ownership view — drag a PMM photo from one tag to another to
+    // reassign that ownership area. Implementation: change the chip's owner
+    // to a representative of the destination tag bucket. If the destination
+    // tag has no owners yet, we can't easily pick one — skip.
+    if (activeIdStr.startsWith('ownership-chip:')) {
+      const chipId = e.active.data.current?.chipId as string | undefined;
+      if (!chipId) return;
+      const chip = chips.find((c) => c.id === chipId);
+      if (!chip) return;
+      if (overIdStr.startsWith('tag-bucket:')) {
+        const [, cat, ...rest] = overIdStr.split(':');
+        const labelKey = rest.join(':');
+        const category = cat as typeof chip.category;
+        // Find the canonical (case-preserving) label by looking at any chip in the bucket.
+        const sample = chips.find(
+          (c) => c.category === category && c.label.trim().toLowerCase() === labelKey,
+        );
+        const newLabel = sample ? sample.label : chip.label;
+        if (newLabel !== chip.label || category !== chip.category) {
+          useStore.getState().updateChipLabel(chipId, newLabel);
+          // No category move in this drag — the user moved a photo within the
+          // same active tab (i.e. same category). Skipping cross-category.
+        }
       }
       return;
     }
@@ -132,6 +164,12 @@ export default function App() {
   const activeChip = activeChipId ? chips.find((c) => c.id === activeChipId) : null;
   const activeMember = activeMemberId ? people.find((p) => p.id === activeMemberId) : null;
   const activePerson = activePersonId ? people.find((p) => p.id === activePersonId) : null;
+  const activeOwnershipChip = activeOwnershipChipId
+    ? chips.find((c) => c.id === activeOwnershipChipId)
+    : null;
+  const activeOwnershipPerson = activeOwnershipChip
+    ? people.find((p) => p.id === activeOwnershipChip.ownerId)
+    : null;
 
   return (
     <DndContext
@@ -174,6 +212,14 @@ export default function App() {
           <div className="h-14 w-14 overflow-hidden rounded-full shadow-2xl ring-2 ring-accent">
             <img
               src={resolvePhotoUrl(activePerson.photoUrl)}
+              className="h-full w-full object-cover"
+              alt=""
+            />
+          </div>
+        ) : activeOwnershipPerson ? (
+          <div className="h-10 w-10 overflow-hidden rounded-full shadow-2xl ring-2 ring-accent">
+            <img
+              src={resolvePhotoUrl(activeOwnershipPerson.photoUrl)}
               className="h-full w-full object-cover"
               alt=""
             />

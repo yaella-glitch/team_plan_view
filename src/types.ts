@@ -2,8 +2,7 @@ export type Category =
   | 'pmmFocus'
   | 'businessKpi'
   | 'persona'
-  | 'marketingFocal'
-  | 'croCcoFocal'
+  | 'channels'
   | 'productFocal'
   | 'agenticFlow';
 

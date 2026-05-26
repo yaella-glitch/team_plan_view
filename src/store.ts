@@ -360,7 +360,31 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'team-plan-view-v1',
-      version: 1,
+      version: 2,
+      migrate: (persisted, fromVersion) => {
+        const s = (persisted ?? {}) as Partial<AppState> & { chips?: ChipValue[]; people?: Person[]; activeTopicTab?: Category };
+        if (fromVersion < 2) {
+          // v1 → v2: merge marketingFocal + croCcoFocal → channels
+          const remap = (cat: string): Category =>
+            (cat === 'marketingFocal' || cat === 'croCcoFocal') ? 'channels' : (cat as Category);
+
+          if (Array.isArray(s.chips)) {
+            s.chips = s.chips.map((c) => ({ ...c, category: remap(c.category as string) }));
+          }
+          if (Array.isArray(s.people)) {
+            s.people = s.people.map((p) => ({
+              ...p,
+              hiddenCategories: Array.from(
+                new Set((p.hiddenCategories ?? []).map((c) => remap(c as string))),
+              ),
+            }));
+          }
+          if (s.activeTopicTab === ('marketingFocal' as Category) || s.activeTopicTab === ('croCcoFocal' as Category)) {
+            s.activeTopicTab = 'channels';
+          }
+        }
+        return s as AppState;
+      },
     },
   ),
 );

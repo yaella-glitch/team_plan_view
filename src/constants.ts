@@ -4,14 +4,19 @@ export type CategoryMeta = {
   id: Category;
   label: string;
   icon: string;
-  /** Tailwind classes for chip background + text in dark mode */
+  /** Tailwind classes for chip background + text in dark mode (used in PersonCard) */
   tint: string;
   /** Border class for chips */
   border: string;
+  /** Bold hex color used by the inverted Ownership-by-topic view (where each tag is a colored rectangle) */
+  ownershipColor: string;
 };
 
 /**
- * Dark-mode chip palette — soft tinted translucent background with light text.
+ * 6 categories — Marketing focal and CRO/CCO focal have been merged into "Channels".
+ *
+ * `ownershipColor` is used by the inverted Ownership-by-topic view; it gives each
+ * category a bold solid hex color as specified by Yaella.
  */
 export const CATEGORIES: CategoryMeta[] = [
   {
@@ -20,6 +25,7 @@ export const CATEGORIES: CategoryMeta[] = [
     icon: '🎯',
     tint: 'bg-rose-400/15 text-rose-100',
     border: 'border-rose-400/30',
+    ownershipColor: '#fd87e4', // pink
   },
   {
     id: 'businessKpi',
@@ -27,6 +33,7 @@ export const CATEGORIES: CategoryMeta[] = [
     icon: '📊',
     tint: 'bg-amber-400/15 text-amber-100',
     border: 'border-amber-400/30',
+    ownershipColor: '#fd956e', // orange / peach
   },
   {
     id: 'persona',
@@ -34,20 +41,15 @@ export const CATEGORIES: CategoryMeta[] = [
     icon: '👤',
     tint: 'bg-emerald-400/15 text-emerald-100',
     border: 'border-emerald-400/30',
+    ownershipColor: '#3cbdc8', // teal
   },
   {
-    id: 'marketingFocal',
-    label: 'Marketing focal',
+    id: 'channels',
+    label: 'Channels',
     icon: '📣',
     tint: 'bg-sky-400/15 text-sky-100',
     border: 'border-sky-400/30',
-  },
-  {
-    id: 'croCcoFocal',
-    label: 'CRO / CCO focal',
-    icon: '💼',
-    tint: 'bg-indigo-400/20 text-indigo-100',
-    border: 'border-indigo-400/40',
+    ownershipColor: '#c0b0f7', // lavender
   },
   {
     id: 'productFocal',
@@ -55,6 +57,7 @@ export const CATEGORIES: CategoryMeta[] = [
     icon: '🧩',
     tint: 'bg-violet-400/20 text-violet-100',
     border: 'border-violet-400/40',
+    ownershipColor: '#38ccde', // cyan
   },
   {
     id: 'agenticFlow',
@@ -62,6 +65,7 @@ export const CATEGORIES: CategoryMeta[] = [
     icon: '🤖',
     tint: 'bg-slate-400/15 text-slate-100',
     border: 'border-slate-400/30',
+    ownershipColor: '#d2faff', // pale ice blue
   },
 ];
 
