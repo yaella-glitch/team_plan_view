@@ -28,6 +28,8 @@ type Actions = {
   // About images
   setAboutImage: (index: number, img: AboutImage | null) => void;
   setAboutCaption: (index: number, caption: string) => void;
+  addAboutSlide: () => void;
+  removeAboutSlide: (index: number) => void;
 
   // Latest items
   addLatestItem: () => string;
@@ -252,7 +254,7 @@ export const useStore = create<Store>()(
       setAboutImage: (index, img) =>
         set((state) => {
           const next = [...(state.about ?? [null, null, null])];
-          while (next.length < 3) next.push(null);
+          while (next.length <= index) next.push(null);
           next[index] = img;
           return { about: next };
         }),
@@ -262,6 +264,14 @@ export const useStore = create<Store>()(
           while (next.length < 3) next.push(null);
           const cur = next[index];
           next[index] = cur ? { ...cur, caption } : { dataUrl: '', caption };
+          return { about: next };
+        }),
+      addAboutSlide: () =>
+        set((state) => ({ about: [...(state.about ?? []), null] })),
+      removeAboutSlide: (index) =>
+        set((state) => {
+          const next = [...(state.about ?? [])];
+          next.splice(index, 1);
           return { about: next };
         }),
 

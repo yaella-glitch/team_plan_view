@@ -3,26 +3,36 @@ import { useStore } from '../store';
 import type { AboutImage } from '../types';
 import { compressImage } from '../lib/image';
 
-const SLOTS = [
-  { label: 'Win', placeholder: 'Drop a screenshot of a team win' },
-  { label: 'Goals', placeholder: 'Drop a screenshot of team goals' },
-  { label: 'Focuses', placeholder: 'Drop a screenshot of team focuses' },
-];
-
 export function About() {
-  const about = useStore((s) => s.about ?? [null, null, null]);
+  const about = useStore((s) => (s.about && s.about.length > 0 ? s.about : [null, null, null]));
+  const addAboutSlide = useStore((s) => s.addAboutSlide);
+  const removeAboutSlide = useStore((s) => s.removeAboutSlide);
   const [active, setActive] = useState(0);
 
-  // Clamp active index if slot count changes
+  // Clamp active index if count changes
   useEffect(() => {
-    if (active >= SLOTS.length) setActive(0);
-  }, [active]);
+    if (active >= about.length) setActive(Math.max(0, about.length - 1));
+  }, [about.length, active]);
 
-  const prev = () => setActive((i) => (i === 0 ? SLOTS.length - 1 : i - 1));
-  const next = () => setActive((i) => (i === SLOTS.length - 1 ? 0 : i + 1));
+  const count = about.length;
+  const prev = () => setActive((i) => (i === 0 ? count - 1 : i - 1));
+  const next = () => setActive((i) => (i === count - 1 ? 0 : i + 1));
 
-  const slot = SLOTS[active];
   const image = about[active] ?? null;
+
+  const onAdd = () => {
+    addAboutSlide();
+    setActive(count); // jump to newly added slide
+  };
+
+  const onRemove = () => {
+    if (count <= 1) {
+      alert('Need at least one slide.');
+      return;
+    }
+    if (!confirm('Remove this slide?')) return;
+    removeAboutSlide(active);
+  };
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-10">
@@ -31,63 +41,68 @@ export function About() {
       </div>
 
       <div className="relative">
-        {/* Slide */}
-        <Slide
-          index={active}
-          label={slot.label}
-          placeholder={slot.placeholder}
-          image={image}
-        />
+        <Slide index={active} image={image} />
 
-        {/* Side arrows */}
-        <button
-          type="button"
-          onClick={prev}
-          aria-label="Previous slide"
-          className="absolute -left-3 top-1/2 -translate-y-1/2 rounded-full bg-surface/90 p-2 text-ink shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-surface"
-        >
-          <ChevronLeft />
-        </button>
-        <button
-          type="button"
-          onClick={next}
-          aria-label="Next slide"
-          className="absolute -right-3 top-1/2 -translate-y-1/2 rounded-full bg-surface/90 p-2 text-ink shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-surface"
-        >
-          <ChevronRight />
-        </button>
+        {count > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={prev}
+              aria-label="Previous slide"
+              className="absolute -left-3 top-1/2 -translate-y-1/2 rounded-full bg-surface/90 p-2 text-ink shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-surface"
+            >
+              <ChevronLeft />
+            </button>
+            <button
+              type="button"
+              onClick={next}
+              aria-label="Next slide"
+              className="absolute -right-3 top-1/2 -translate-y-1/2 rounded-full bg-surface/90 p-2 text-ink shadow-lg ring-1 ring-white/10 backdrop-blur hover:bg-surface"
+            >
+              <ChevronRight />
+            </button>
+          </>
+        )}
       </div>
 
-      {/* Dots */}
+      {/* Dots + add/remove controls */}
       <div className="mt-4 flex items-center justify-center gap-2">
-        {SLOTS.map((s, i) => (
+        {about.map((_, i) => (
           <button
-            key={s.label}
+            key={i}
             type="button"
             onClick={() => setActive(i)}
-            aria-label={`Go to slide ${i + 1}: ${s.label}`}
+            aria-label={`Go to slide ${i + 1}`}
             className={[
               'h-2 rounded-full transition-all',
               i === active ? 'w-8 bg-accent' : 'w-2 bg-white/20 hover:bg-white/40',
             ].join(' ')}
           />
         ))}
+        <button
+          type="button"
+          onClick={onAdd}
+          title="Add a slide"
+          className="ml-2 flex h-5 w-5 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs text-muted hover:border-accent/60 hover:text-ink"
+        >
+          +
+        </button>
+        {image?.dataUrl && (
+          <button
+            type="button"
+            onClick={onRemove}
+            title="Remove this slide"
+            className="flex h-5 w-5 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-xs text-muted hover:border-rose-400/60 hover:text-rose-300"
+          >
+            ×
+          </button>
+        )}
       </div>
     </section>
   );
 }
 
-function Slide({
-  index,
-  label,
-  placeholder,
-  image,
-}: {
-  index: number;
-  label: string;
-  placeholder: string;
-  image: AboutImage | null;
-}) {
+function Slide({ index, image }: { index: number; image: AboutImage | null }) {
   const setAboutImage = useStore((s) => s.setAboutImage);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -107,22 +122,21 @@ function Slide({
   return (
     <div className="card-gradient mx-auto">
       <div className="card-gradient-inner">
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        className="group relative block aspect-[16/9] w-full overflow-hidden"
-      >
-        {image?.dataUrl ? (
-          <img src={image.dataUrl} alt={label} className="h-full w-full object-contain" />
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center text-muted">
-            <span className="text-5xl">🖼</span>
-            <span className="text-lg font-semibold text-ink">{label}</span>
-            <span className="text-sm italic">{placeholder}</span>
-          </div>
-        )}
-      </button>
-      <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="group relative block aspect-[16/9] w-full overflow-hidden"
+        >
+          {image?.dataUrl ? (
+            <img src={image.dataUrl} alt="" className="h-full w-full object-contain" />
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-center text-muted">
+              <span className="text-5xl">🖼</span>
+              <span className="text-sm italic">Click to upload an image</span>
+            </div>
+          )}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
       </div>
     </div>
   );

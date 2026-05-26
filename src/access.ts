@@ -18,5 +18,15 @@
 export const PASSWORD_HASH =
   'ff4ae065c5c2fac3fc1405a0bd7bb95b7b6f00be85141867d4fdc4bc70a76701';
 
+/**
+ * SHA-256 of the ADMIN password — required to open the admin drawer.
+ * This is separate from PASSWORD_HASH so viewers with the page password can
+ * browse but cannot edit. Default is "admin" — change it for real use.
+ *
+ *   echo -n "your-admin-password" | shasum -a 256
+ */
+export const ADMIN_PASSWORD_HASH =
+  '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
+
 /** Bump this version to invalidate all unlocked sessions (e.g., after a password rotation). */
 export const ACCESS_VERSION = 1;

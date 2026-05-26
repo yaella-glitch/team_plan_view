@@ -3,7 +3,34 @@ import { useStore } from '../store';
 import { AddOwnershipModal } from './Backlog';
 import { useTheme, DEFAULT_PALETTE, MONDAY_PALETTE, type Palette } from '../theme';
 import { AvatarEditor } from './AvatarEditor';
+import { ADMIN_PASSWORD_HASH } from '../access';
 import type { AppState, Person } from '../types';
+
+const ADMIN_UNLOCK_KEY = 'team-plan-view-admin-unlocked-v1';
+
+function isAdminUnlocked(): boolean {
+  try {
+    return sessionStorage.getItem(ADMIN_UNLOCK_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setAdminUnlocked() {
+  try {
+    sessionStorage.setItem(ADMIN_UNLOCK_KEY, '1');
+  } catch {
+    // ignore
+  }
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 export function AdminDrawer() {
   const [open, setOpen] = useState(false);
@@ -27,6 +54,8 @@ export function AdminDrawer() {
 }
 
 function Drawer({ onClose }: { onClose: () => void }) {
+  const [unlocked, setUnlocked] = useState(() => isAdminUnlocked());
+
   return (
     <div className="fixed inset-0 z-40">
       <div
@@ -49,18 +78,83 @@ function Drawer({ onClose }: { onClose: () => void }) {
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-5">
-          <QuickAddSection />
-          <PMMsSection />
-          <AboutSection />
-          <LatestSection />
-          <SubTeamsSection />
-          <ThemeSection />
-          <DataSection />
-          <DangerZone />
-        </div>
+        {!unlocked ? (
+          <AdminLock
+            onUnlock={() => {
+              setAdminUnlocked();
+              setUnlocked(true);
+            }}
+          />
+        ) : (
+          <div className="flex-1 overflow-y-auto p-5">
+            <QuickAddSection />
+            <PMMsSection />
+            <AboutSection />
+            <LatestSection />
+            <SubTeamsSection />
+            <ThemeSection />
+            <DataSection />
+            <DangerZone />
+          </div>
+        )}
       </aside>
     </div>
+  );
+}
+
+function AdminLock({ onUnlock }: { onUnlock: () => void }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    try {
+      const hash = await sha256Hex(password);
+      if (hash === ADMIN_PASSWORD_HASH) {
+        onUnlock();
+      } else {
+        setError('Wrong password.');
+        setPassword('');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={onSubmit} className="flex flex-1 flex-col items-center justify-center p-6">
+      <div className="w-full max-w-xs">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/15 px-3 py-1 text-xs font-medium text-accent">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+          Editor only
+        </div>
+        <h3 className="text-2xl font-light text-ink">Unlock admin</h3>
+        <p className="mt-1 text-xs text-muted">Edit team plan content. Closes when you close this tab.</p>
+
+        <label className="mt-5 block text-xs font-semibold uppercase tracking-wide text-muted">
+          Admin password
+        </label>
+        <input
+          type="password"
+          autoFocus
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="mt-1.5 w-full rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3 text-base text-ink outline-none focus:border-accent/60 focus:ring-2 focus:ring-accent/20"
+          placeholder="••••••••"
+        />
+        {error && <p className="mt-2 text-sm text-rose-300">{error}</p>}
+        <button
+          type="submit"
+          disabled={submitting || password.length === 0}
+          className="mt-5 w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-canvas hover:opacity-90 disabled:opacity-50"
+        >
+          {submitting ? 'Checking…' : 'Unlock'}
+        </button>
+      </div>
+    </form>
   );
 }
 
