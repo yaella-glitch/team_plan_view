@@ -8,7 +8,7 @@ import { AvatarEditor } from './AvatarEditor';
 type Props = { person: Person };
 
 export function PersonCard({ person }: Props) {
-  const chips = useStore((s) => s.chips);
+  const allTopics = useStore((s) => s.topics ?? []);
   const updatePerson = useStore((s) => s.updatePerson);
   const hideCategoryForPerson = useStore((s) => s.hideCategoryForPerson);
   const showCategoryForPerson = useStore((s) => s.showCategoryForPerson);
@@ -77,8 +77,8 @@ export function PersonCard({ person }: Props) {
               key={cat.id}
               ownerId={person.id}
               category={cat.id}
-              chips={chips
-                .filter((c) => c.ownerId === person.id && c.category === cat.id)
+              topics={allTopics
+                .filter((t) => t.category === cat.id && t.pmmIds.includes(person.id))
                 .sort((a, b) => a.order - b.order)}
               onRemoveSection={() => hideCategoryForPerson(person.id, cat.id)}
             />
