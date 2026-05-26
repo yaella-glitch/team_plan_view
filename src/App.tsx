@@ -33,7 +33,7 @@ export default function App() {
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
   const [activePersonId, setActivePersonId] = useState<string | null>(null);
-  const [activeOwnershipChipId, setActiveOwnershipChipId] = useState<string | null>(null);
+  const [activeTopicOwner, setActiveTopicOwner] = useState<string | null>(null);
 
   // Apply the (possibly-customized) palette to CSS variables on mount and whenever it changes.
   useEffect(() => {
@@ -51,9 +51,9 @@ export default function App() {
       if (personId) setActiveMemberId(personId);
     } else if (idStr.startsWith('person:')) {
       setActivePersonId(idStr.slice('person:'.length));
-    } else if (idStr.startsWith('ownership-chip:')) {
-      const chipId = e.active.data.current?.chipId as string | undefined;
-      if (chipId) setActiveOwnershipChipId(chipId);
+    } else if (idStr.startsWith('topic-pmm:')) {
+      const personId = e.active.data.current?.personId as string | undefined;
+      if (personId) setActiveTopicOwner(personId);
     }
   };
 
@@ -61,7 +61,7 @@ export default function App() {
     setActiveChipId(null);
     setActiveMemberId(null);
     setActivePersonId(null);
-    setActiveOwnershipChipId(null);
+    setActiveTopicOwner(null);
     if (!e.over) return;
     const activeIdStr = String(e.active.id);
     const overIdStr = String(e.over.id);
@@ -96,20 +96,17 @@ export default function App() {
       return;
     }
 
-    // CASE: Ownership view — drag a PMM photo from one chip card to another
-    // to swap that card's owner with the dragged person.
-    if (activeIdStr.startsWith('ownership-chip:')) {
-      const sourceOwnerId = e.active.data.current?.ownerId as string | undefined;
-      if (!sourceOwnerId) return;
-      if (overIdStr.startsWith('chip-card:')) {
-        const destChipId = overIdStr.slice('chip-card:'.length);
-        const destChip = chips.find((c) => c.id === destChipId);
-        if (!destChip) return;
-        // Reassign destination chip to the dragged person.
-        useStore.getState().moveChip(destChipId, {
-          ownerId: sourceOwnerId,
-          category: destChip.category,
-        });
+    // CASE: Ownership Topics — drag a PMM photo from one topic card to another.
+    // Moves the PMM from the source topic to the destination topic.
+    if (activeIdStr.startsWith('topic-pmm:')) {
+      const fromTopicId = e.active.data.current?.topicId as string | undefined;
+      const personId = e.active.data.current?.personId as string | undefined;
+      if (!fromTopicId || !personId) return;
+      if (overIdStr.startsWith('topic:')) {
+        const toTopicId = overIdStr.slice('topic:'.length);
+        if (fromTopicId !== toTopicId) {
+          useStore.getState().movePmmBetweenTopics(personId, fromTopicId, toTopicId);
+        }
       }
       return;
     }
@@ -155,11 +152,8 @@ export default function App() {
   const activeChip = activeChipId ? chips.find((c) => c.id === activeChipId) : null;
   const activeMember = activeMemberId ? people.find((p) => p.id === activeMemberId) : null;
   const activePerson = activePersonId ? people.find((p) => p.id === activePersonId) : null;
-  const activeOwnershipChip = activeOwnershipChipId
-    ? chips.find((c) => c.id === activeOwnershipChipId)
-    : null;
-  const activeOwnershipPerson = activeOwnershipChip
-    ? people.find((p) => p.id === activeOwnershipChip.ownerId)
+  const activeTopicOwnerPerson = activeTopicOwner
+    ? people.find((p) => p.id === activeTopicOwner)
     : null;
 
   return (
@@ -207,10 +201,10 @@ export default function App() {
               alt=""
             />
           </div>
-        ) : activeOwnershipPerson ? (
+        ) : activeTopicOwnerPerson ? (
           <div className="h-10 w-10 overflow-hidden rounded-full shadow-2xl ring-2 ring-accent">
             <img
-              src={resolvePhotoUrl(activeOwnershipPerson.photoUrl)}
+              src={resolvePhotoUrl(activeTopicOwnerPerson.photoUrl)}
               className="h-full w-full object-cover"
               alt=""
             />

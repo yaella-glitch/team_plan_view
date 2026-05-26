@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { AboutImage, AppState, Category, ChipValue, LatestItem, Person, SubTeam } from './types';
-import { buildSeed } from './seed';
+import type { AboutImage, AppState, Category, ChipValue, LatestItem, Person, SubTeam, Topic } from './types';
+import { buildSeed, buildSeedTopics } from './seed';
 
 type Actions = {
   // Chip operations
@@ -48,6 +48,15 @@ type Actions = {
   setSubTeamGoalText: (id: string, text: string) => void;
   addSubTeamTag: (id: string, tag: string) => void;
   removeSubTeamTag: (id: string, tagIndex: number) => void;
+
+  // Topics
+  addTopic: (name?: string) => string;
+  renameTopic: (id: string, name: string) => void;
+  removeTopic: (id: string) => void;
+  reorderTopic: (id: string, targetId: string) => void;
+  addPmmToTopic: (topicId: string, pmmId: string) => void;
+  removePmmFromTopic: (topicId: string, pmmId: string) => void;
+  movePmmBetweenTopics: (pmmId: string, fromTopicId: string, toTopicId: string) => void;
 
   // Bulk
   replaceState: (s: AppState) => void;
@@ -402,14 +411,72 @@ export const useStore = create<Store>()(
           }),
         })),
 
+      // Topics ---------------------------------------------------------------
+      addTopic: (name = 'New topic') => {
+        const id = nanoid(8);
+        set((state) => ({
+          topics: [
+            ...(state.topics ?? []),
+            { id, name, pmmIds: [], order: (state.topics ?? []).length },
+          ],
+        }));
+        return id;
+      },
+      renameTopic: (id, name) =>
+        set((state) => ({
+          topics: (state.topics ?? []).map((t) => (t.id === id ? { ...t, name } : t)),
+        })),
+      removeTopic: (id) =>
+        set((state) => ({ topics: (state.topics ?? []).filter((t) => t.id !== id) })),
+      reorderTopic: (id, targetId) =>
+        set((state) => {
+          if (id === targetId) return {};
+          const sorted = [...(state.topics ?? [])].sort((a, b) => a.order - b.order);
+          const fromIdx = sorted.findIndex((t) => t.id === id);
+          const toIdx = sorted.findIndex((t) => t.id === targetId);
+          if (fromIdx < 0 || toIdx < 0) return {};
+          const [moved] = sorted.splice(fromIdx, 1);
+          sorted.splice(toIdx, 0, moved);
+          const idToOrder = new Map(sorted.map((t, i) => [t.id, i]));
+          return {
+            topics: (state.topics ?? []).map((t) => ({ ...t, order: idToOrder.get(t.id) ?? t.order })),
+          };
+        }),
+      addPmmToTopic: (topicId, pmmId) =>
+        set((state) => ({
+          topics: (state.topics ?? []).map((t) =>
+            t.id === topicId && !t.pmmIds.includes(pmmId)
+              ? { ...t, pmmIds: [...t.pmmIds, pmmId] }
+              : t,
+          ),
+        })),
+      removePmmFromTopic: (topicId, pmmId) =>
+        set((state) => ({
+          topics: (state.topics ?? []).map((t) =>
+            t.id === topicId ? { ...t, pmmIds: t.pmmIds.filter((id) => id !== pmmId) } : t,
+          ),
+        })),
+      movePmmBetweenTopics: (pmmId, fromTopicId, toTopicId) =>
+        set((state) => ({
+          topics: (state.topics ?? []).map((t) => {
+            if (t.id === fromTopicId) {
+              return { ...t, pmmIds: t.pmmIds.filter((id) => id !== pmmId) };
+            }
+            if (t.id === toTopicId) {
+              return t.pmmIds.includes(pmmId) ? t : { ...t, pmmIds: [...t.pmmIds, pmmId] };
+            }
+            return t;
+          }),
+        })),
+
       replaceState: (s) => set(s),
       resetToSeed: () => set(buildSeed()),
     }),
     {
       name: 'team-plan-view-v1',
-      version: 2,
+      version: 3,
       migrate: (persisted, fromVersion) => {
-        const s = (persisted ?? {}) as Partial<AppState> & { chips?: ChipValue[]; people?: Person[]; activeTopicTab?: Category };
+        const s = (persisted ?? {}) as Partial<AppState> & { chips?: ChipValue[]; people?: Person[]; activeTopicTab?: Category; topics?: Topic[] };
         if (fromVersion < 2) {
           // v1 → v2: merge marketingFocal + croCcoFocal → channels
           const remap = (cat: string): Category =>
@@ -428,6 +495,12 @@ export const useStore = create<Store>()(
           }
           if (s.activeTopicTab === ('marketingFocal' as Category) || s.activeTopicTab === ('croCcoFocal' as Category)) {
             s.activeTopicTab = 'channels';
+          }
+        }
+        if (fromVersion < 3) {
+          // v2 → v3: introduce Topics. Seed with the canonical list if absent.
+          if (!Array.isArray(s.topics) || s.topics.length === 0) {
+            s.topics = buildSeedTopics();
           }
         }
         return s as AppState;

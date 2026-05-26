@@ -53,6 +53,14 @@ export type SubTeam = {
   tags?: string[];
 };
 
+export type Topic = {
+  id: string;
+  name: string;
+  /** Many-to-many: a topic can have multiple PMM owners. */
+  pmmIds: string[];
+  order: number;
+};
+
 export type AppState = {
   people: Person[];
   chips: ChipValue[];
@@ -60,4 +68,5 @@ export type AppState = {
   about: (AboutImage | null)[]; // 3 slots
   latest: LatestItem[];
   subTeams: SubTeam[];
+  topics: Topic[];
 };

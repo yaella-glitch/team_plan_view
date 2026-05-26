@@ -4,6 +4,7 @@ import { AddOwnershipModal } from './Backlog';
 import { useTheme, DEFAULT_PALETTE, MONDAY_PALETTE, type Palette } from '../theme';
 import { AvatarEditor } from './AvatarEditor';
 import { ADMIN_PASSWORD_HASH } from '../access';
+import { resolvePhotoUrl } from '../lib/photo';
 import type { AppState, Person } from '../types';
 
 const ADMIN_UNLOCK_KEY = 'team-plan-view-admin-unlocked-v1';
@@ -89,6 +90,7 @@ function Drawer({ onClose }: { onClose: () => void }) {
           <div className="flex-1 overflow-y-auto p-5">
             <QuickAddSection />
             <PMMsSection />
+            <TopicsSection />
             <AboutSection />
             <LatestSection />
             <SubTeamsSection />
@@ -166,6 +168,7 @@ function QuickAddSection() {
   const addSubTeam = useStore((s) => s.addSubTeam);
   const addAboutSlide = useStore((s) => s.addAboutSlide);
   const addLatestItem = useStore((s) => s.addLatestItem);
+  const addTopic = useStore((s) => s.addTopic);
   const [openOwnership, setOpenOwnership] = useState(false);
 
   const tile = 'rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-left text-sm font-medium text-ink transition-colors hover:border-accent/40 hover:bg-white/[0.06]';
@@ -203,6 +206,12 @@ function QuickAddSection() {
           <div className="flex items-center gap-2">
             <span className="text-xl">⬌</span>
             <span>+ Add cross pod</span>
+          </div>
+        </button>
+        <button type="button" onClick={() => { const name = prompt('New topic name?'); if (name && name.trim()) addTopic(name.trim()); }} className={tile}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">📌</span>
+            <span>+ Add topic</span>
           </div>
         </button>
         <button type="button" onClick={() => addAboutSlide()} className={tile}>
@@ -449,6 +458,199 @@ function LatestSection() {
         </ul>
       )}
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+function TopicsSection() {
+  const topics = useStore((s) => s.topics ?? []);
+  const people = useStore((s) => s.people);
+  const addTopic = useStore((s) => s.addTopic);
+  const renameTopic = useStore((s) => s.renameTopic);
+  const removeTopic = useStore((s) => s.removeTopic);
+  const addPmmToTopic = useStore((s) => s.addPmmToTopic);
+  const removePmmFromTopic = useStore((s) => s.removePmmFromTopic);
+  const sortedTopics = [...topics].sort((a, b) => a.order - b.order);
+
+  return (
+    <section className="mb-8">
+      <SectionHeader
+        title="Topics"
+        action={
+          <button
+            type="button"
+            onClick={() => {
+              const name = prompt('New topic name?');
+              if (name && name.trim()) addTopic(name.trim());
+            }}
+            className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-xs text-muted hover:border-accent/60 hover:text-ink"
+          >
+            + Add
+          </button>
+        }
+      />
+      <p className="mb-2 text-[11px] text-muted">
+        Edit names, assign PMMs, or remove. Each topic can have multiple PMMs.
+      </p>
+      {sortedTopics.length === 0 ? (
+        <p className="text-xs italic text-muted">No topics yet.</p>
+      ) : (
+        <ul className="space-y-2">
+          {sortedTopics.map((t) => (
+            <TopicAdminRow
+              key={t.id}
+              topicId={t.id}
+              topicName={t.name}
+              pmmIds={t.pmmIds}
+              allPeople={people}
+              onRename={(name) => renameTopic(t.id, name)}
+              onRemove={() => removeTopic(t.id)}
+              onAddPmm={(pmmId) => addPmmToTopic(t.id, pmmId)}
+              onRemovePmm={(pmmId) => removePmmFromTopic(t.id, pmmId)}
+            />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function TopicAdminRow({
+  topicId: _topicId,
+  topicName,
+  pmmIds,
+  allPeople,
+  onRename,
+  onRemove,
+  onAddPmm,
+  onRemovePmm,
+}: {
+  topicId: string;
+  topicName: string;
+  pmmIds: string[];
+  allPeople: Person[];
+  onRename: (name: string) => void;
+  onRemove: () => void;
+  onAddPmm: (pmmId: string) => void;
+  onRemovePmm: (pmmId: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(topicName);
+  const [picker, setPicker] = useState(false);
+  useEffect(() => setDraft(topicName), [topicName]);
+
+  const owners = pmmIds
+    .map((id) => allPeople.find((p) => p.id === id))
+    .filter((p): p is Person => Boolean(p));
+  const available = allPeople.filter((p) => !pmmIds.includes(p.id));
+
+  const commit = () => {
+    if (draft.trim() && draft.trim() !== topicName) onRename(draft.trim());
+    else setDraft(topicName);
+    setEditing(false);
+  };
+
+  return (
+    <li className="rounded-lg border border-white/10 bg-white/[0.03] p-2">
+      <div className="mb-1.5 flex items-center gap-2">
+        {editing ? (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+              else if (e.key === 'Escape') {
+                setDraft(topicName);
+                setEditing(false);
+              }
+            }}
+            className="flex-1 bg-transparent text-sm font-medium text-ink outline-none border-b border-accent/40"
+          />
+        ) : (
+          <span
+            className="flex-1 cursor-text truncate text-sm font-medium text-ink"
+            onDoubleClick={() => setEditing(true)}
+            title="Double-click to rename"
+          >
+            {topicName}
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm(`Remove "${topicName}"?`)) onRemove();
+          }}
+          className="rounded-full px-1.5 py-0 text-xs text-muted hover:bg-rose-500/15 hover:text-rose-300"
+          title="Remove topic"
+        >
+          ×
+        </button>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {owners.map((p) => (
+          <span
+            key={p.id}
+            className="group inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 py-0.5 pl-0.5 pr-2 text-[11px] text-ink"
+          >
+            <img
+              src={resolvePhotoUrl(p.photoUrl) || ''}
+              alt={p.name}
+              className="h-5 w-5 rounded-full object-cover"
+              onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
+            />
+            <span className="truncate">{p.name}</span>
+            <button
+              type="button"
+              onClick={() => onRemovePmm(p.id)}
+              className="opacity-50 hover:opacity-100"
+              title="Remove from topic"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setPicker((v) => !v)}
+            className="rounded-full border border-dashed border-white/15 px-2 py-0.5 text-[11px] text-muted hover:border-accent/60 hover:text-ink"
+            disabled={available.length === 0}
+            title={available.length === 0 ? 'All PMMs are already on this topic' : 'Add a PMM'}
+          >
+            + PMM
+          </button>
+          {picker && available.length > 0 && (
+            <div
+              className="absolute left-0 top-full z-10 mt-1 max-h-[200px] w-44 overflow-y-auto rounded-lg border border-white/10 bg-surface p-1 shadow-xl"
+              onMouseLeave={() => setPicker(false)}
+            >
+              {available.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    onAddPmm(p.id);
+                    setPicker(false);
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-ink hover:bg-white/5"
+                >
+                  <img
+                    src={resolvePhotoUrl(p.photoUrl) || ''}
+                    alt=""
+                    className="h-5 w-5 rounded-full object-cover"
+                    onError={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')}
+                  />
+                  <span className="truncate">{p.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </li>
   );
 }
 

@@ -1,5 +1,27 @@
-import type { AppState, Category, ChipValue, Person } from './types';
+import type { AppState, Category, ChipValue, Person, Topic } from './types';
 import { nanoid } from 'nanoid';
+
+const SEED_TOPIC_NAMES = [
+  'Competitors',
+  'Release engine',
+  'DPT & ICP',
+  'AI transformation',
+  'ENT offering',
+  'PMM knowledge',
+  'Customer zero',
+  'Tech partnerships & ecosystem',
+  'Pricing collateral & growth',
+  'Events support',
+];
+
+export function buildSeedTopics(): Topic[] {
+  return SEED_TOPIC_NAMES.map((name, i) => ({
+    id: nanoid(8),
+    name,
+    pmmIds: [],
+    order: i,
+  }));
+}
 
 /**
  * Seed data derived from the user's slide "Breakdown by PMM".
@@ -179,5 +201,6 @@ export function buildSeed(): AppState {
     about: [null, null, null],
     latest: [],
     subTeams: [],
+    topics: buildSeedTopics(),
   };
 }

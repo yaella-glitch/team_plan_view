@@ -2,239 +2,229 @@ import { useEffect, useState } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useStore, selectVisiblePeople } from '../store';
-import { CATEGORIES, CATEGORY_BY_ID } from '../constants';
-import type { Category, ChipValue, Person } from '../types';
+import type { Person, Topic } from '../types';
 import { resolvePhotoUrl } from '../lib/photo';
 
 /**
- * Ownership by topic — per-chip card grid.
+ * Ownership by topic — Topics view.
  *
- * Each chip = one small rectangular card. The card's body is colored with the
- * category's brand hex; the chip label is the big bold text; the owner's photo
- * sits inset in the lower-right corner. If two PMMs own the same label, both
- * appear as separate cards.
- *
- * Drag the inset photo from one card onto another to swap that card's owner.
+ * Each Topic is a card. A topic can have multiple PMM owners (many-to-many).
+ * Drag a PMM photo from one card to another to MOVE ownership.
+ * Click the + on a card to add a PMM (picker shows PMMs not yet on this topic).
+ * Hover a photo and click × to remove.
  */
 
-const ownershipChipDragId = (chipId: string) => `ownership-chip:${chipId}`;
-const chipCardDropId = (chipId: string) => `chip-card:${chipId}`;
+const topicPmmDragId = (topicId: string, personId: string) => `topic-pmm:${topicId}:${personId}`;
+const topicDropId = (topicId: string) => `topic:${topicId}`;
+
+// Per-topic background gradient — cycles through a palette so each card is distinct.
+const TOPIC_PALETTE = [
+  '#fd87e4', // pink
+  '#fd956e', // peach
+  '#3cbdc8', // teal
+  '#c0b0f7', // lavender
+  '#38ccde', // cyan
+  '#d2faff', // pale
+  '#a58aff', // accent purple
+  '#ff7a90', // coral
+  '#8de2a7', // mint
+  '#f5d76e', // sand
+];
+
+function colorForTopic(order: number): string {
+  return TOPIC_PALETTE[order % TOPIC_PALETTE.length];
+}
 
 export function OwnershipOverview() {
-  const activeTab = useStore((s) => s.activeTopicTab);
-  const setActiveTab = useStore((s) => s.setActiveTopicTab);
+  const topics = useStore((s) => s.topics ?? []);
+  const sortedTopics = [...topics].sort((a, b) => a.order - b.order);
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-8">
-      <div className="mb-4">
-        <h2 className="text-2xl font-bold text-ink">Ownership by topic</h2>
-      </div>
+      <h2 className="mb-4 text-2xl font-bold text-ink">Ownership by topic</h2>
 
       <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 shadow-sm">
-        {/* Tabs row */}
-        <div className="flex flex-wrap gap-2 pb-5">
-          {CATEGORIES.map((c) => {
-            const active = c.id === activeTab;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setActiveTab(c.id)}
-                className="inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-sm transition-all"
-                style={
-                  active
-                    ? {
-                        backgroundColor: c.ownershipColor,
-                        borderColor: c.ownershipColor,
-                        color: pickReadableTextColor(c.ownershipColor),
-                        fontWeight: 600,
-                      }
-                    : {
-                        backgroundColor: 'transparent',
-                        borderColor: 'transparent',
-                        color: 'rgb(var(--muted))',
-                      }
-                }
-              >
-                <span className="text-base leading-none">{c.icon}</span>
-                {c.label}
-              </button>
-            );
-          })}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {sortedTopics.map((t) => (
+            <TopicCard key={t.id} topic={t} color={colorForTopic(t.order)} />
+          ))}
+          {sortedTopics.length === 0 && (
+            <p className="col-span-full text-sm italic text-muted">
+              No topics yet. Add them from Admin → Topics.
+            </p>
+          )}
         </div>
-
-        <ChipCards category={activeTab} />
       </div>
     </section>
   );
 }
 
-function ChipCards({ category }: { category: Category }) {
-  const chips = useStore((s) =>
-    s.chips.filter((c) => c.category === category).sort((a, b) => a.label.localeCompare(b.label)),
-  );
-  const people = useStore(selectVisiblePeople);
-  const meta = CATEGORY_BY_ID[category];
-
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {chips.map((chip) => (
-        <ChipCard key={chip.id} chip={chip} people={people} />
-      ))}
-      {chips.length === 0 && (
-        <p className="col-span-full text-sm italic text-muted">
-          No ownership areas yet in {meta.label}. Add one from Admin → Quick add.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function ChipCard({ chip, people }: { chip: ChipValue; people: Person[] }) {
-  const meta = CATEGORY_BY_ID[chip.category];
-  const updateChipLabel = useStore((s) => s.updateChipLabel);
-  const deleteChip = useStore((s) => s.deleteChip);
-  const owner = chip.ownerId ? people.find((p) => p.id === chip.ownerId) ?? null : null;
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(chip.label);
-  useEffect(() => setDraft(chip.label), [chip.label]);
-
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: chipCardDropId(chip.id),
-    data: { chipId: chip.id, kind: 'chip-card' },
+function TopicCard({ topic, color }: { topic: Topic; color: string }) {
+  const allPeople = useStore(selectVisiblePeople);
+  const addPmmToTopic = useStore((s) => s.addPmmToTopic);
+  const { setNodeRef, isOver } = useDroppable({
+    id: topicDropId(topic.id),
+    data: { topicId: topic.id, kind: 'topic-card' },
   });
-
-  const commit = () => {
-    const v = draft.trim();
-    if (v && v !== chip.label) updateChipLabel(chip.id, v);
-    else setDraft(chip.label);
-    setEditing(false);
-  };
-
-  const textColor = pickReadableTextColor(meta.ownershipColor);
+  const [showPicker, setShowPicker] = useState(false);
+  const owners = topic.pmmIds
+    .map((pid) => allPeople.find((p) => p.id === pid))
+    .filter((p): p is Person => Boolean(p));
+  const available = allPeople.filter((p) => !topic.pmmIds.includes(p.id));
+  const textColor = pickReadableTextColor(color);
 
   return (
     <div
-      ref={setDropRef}
+      ref={setNodeRef}
       className={[
         'group/card relative aspect-[5/2] overflow-hidden rounded-xl shadow-md transition-all',
         isOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-canvas' : '',
       ].join(' ')}
       style={{
-        background: `radial-gradient(circle at 30% 40%, ${meta.ownershipColor}, ${darken(meta.ownershipColor, 0.7)} 80%)`,
+        background: `radial-gradient(circle at 30% 30%, ${color}, ${darken(color, 0.7)} 80%)`,
       }}
     >
-      {/* Label (top-left) */}
-      <div className="absolute inset-x-2.5 top-2 pr-12">
-        {editing ? (
-          <input
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-              else if (e.key === 'Escape') {
-                setDraft(chip.label);
-                setEditing(false);
-              }
-            }}
-            className="w-full bg-transparent text-xs font-bold leading-tight outline-none"
-            style={{ color: textColor }}
+      {/* Topic name (top-left, leaves room for owners on the right) */}
+      <div className="absolute inset-x-2.5 top-2 pr-14">
+        <h4 className="text-xs font-bold leading-tight" style={{ color: textColor }}>
+          {topic.name}
+        </h4>
+      </div>
+
+      {/* Owner photos (bottom-right, stacked horizontally) */}
+      <div className="absolute bottom-1.5 right-1.5 flex flex-wrap items-center justify-end gap-1">
+        {owners.map((person) => (
+          <DraggableOwner
+            key={person.id}
+            topicId={topic.id}
+            person={person}
+            ringColor={textColor}
           />
-        ) : (
-          <h4
-            className="cursor-text text-xs font-bold leading-tight"
-            style={{ color: textColor }}
-            onDoubleClick={() => setEditing(true)}
-            title="Double-click to rename"
-          >
-            {chip.label}
-          </h4>
-        )}
+        ))}
+        <button
+          type="button"
+          onClick={() => setShowPicker((v) => !v)}
+          title="Add a PMM to this topic"
+          className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed text-xs font-bold transition-transform hover:scale-110"
+          style={{ borderColor: textColor + '99', color: textColor }}
+        >
+          +
+        </button>
       </div>
 
-      {/* Delete */}
-      <button
-        type="button"
-        onClick={() => {
-          if (confirm(`Delete "${chip.label}"?`)) deleteChip(chip.id);
-        }}
-        className="absolute right-1 top-1 rounded-full px-1 text-xs opacity-0 transition-opacity group-hover/card:opacity-60 hover:!opacity-100"
-        style={{ color: textColor }}
-        title="Delete this ownership area"
-      >
-        ×
-      </button>
-
-      {/* Photo inset in lower-right */}
-      <div className="absolute bottom-1.5 right-1.5">
-        {owner ? (
-          <DraggablePhoto chipId={chip.id} person={owner} ringColor={textColor} />
-        ) : (
-          <UnownedDropHint chipId={chip.id} ringColor={textColor} />
-        )}
-      </div>
+      {/* PMM picker — opens when + is clicked */}
+      {showPicker && (
+        <div
+          className="absolute right-1.5 top-1.5 z-10 max-h-[180px] w-44 overflow-y-auto rounded-lg border border-white/10 bg-surface p-1.5 shadow-xl"
+          onMouseLeave={() => setShowPicker(false)}
+        >
+          {available.length === 0 ? (
+            <p className="px-2 py-1 text-[11px] italic text-muted">All PMMs are already on this topic.</p>
+          ) : (
+            available.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  addPmmToTopic(topic.id, p.id);
+                  setShowPicker(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs text-ink hover:bg-white/5"
+              >
+                <MiniPhoto person={p} />
+                <span className="truncate">{p.name}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function DraggablePhoto({
-  chipId,
+function DraggableOwner({
+  topicId,
   person,
   ringColor,
 }: {
-  chipId: string;
+  topicId: string;
   person: Person;
   ringColor: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: ownershipChipDragId(chipId),
-    data: { chipId, ownerId: person.id, kind: 'ownership-photo' },
+    id: topicPmmDragId(topicId, person.id),
+    data: { topicId, personId: person.id, kind: 'topic-owner' },
   });
+  const removePmmFromTopic = useStore((s) => s.removePmmFromTopic);
   const photo = resolvePhotoUrl(person.photoUrl);
   const [imgFailed, setImgFailed] = useState(false);
   useEffect(() => setImgFailed(false), [person.photoUrl]);
 
   return (
-    <button
-      ref={setNodeRef}
-      type="button"
+    <div
+      className="group/owner relative"
       style={{
         transform: CSS.Translate.toString(transform),
         opacity: isDragging ? 0.4 : 1,
-        boxShadow: `0 0 0 2px ${ringColor}`,
       }}
-      className="block h-8 w-8 cursor-grab overflow-hidden rounded-full bg-white transition-transform hover:scale-110 active:cursor-grabbing"
-      title={`${person.name} — drag onto another card to swap`}
-      {...listeners}
-      {...attributes}
     >
+      <button
+        ref={setNodeRef}
+        type="button"
+        title={`${person.name} — drag to move to another topic`}
+        style={{ boxShadow: `0 0 0 2px ${ringColor}` }}
+        className="block h-8 w-8 cursor-grab overflow-hidden rounded-full bg-white transition-transform hover:scale-110 active:cursor-grabbing"
+        {...listeners}
+        {...attributes}
+      >
+        {photo && !imgFailed ? (
+          <img
+            src={photo}
+            alt={person.name}
+            className="h-full w-full object-cover"
+            onError={() => setImgFailed(true)}
+            draggable={false}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold text-slate-700">
+            {initials(person.name)}
+          </div>
+        )}
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          removePmmFromTopic(topicId, person.id);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        title={`Remove ${person.name}`}
+        className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white opacity-0 shadow transition-opacity group-hover/owner:opacity-100"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+function MiniPhoto({ person }: { person: Person }) {
+  const photo = resolvePhotoUrl(person.photoUrl);
+  const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => setImgFailed(false), [person.photoUrl]);
+  return (
+    <div className="h-6 w-6 overflow-hidden rounded-full bg-white/10">
       {photo && !imgFailed ? (
         <img
           src={photo}
           alt={person.name}
           className="h-full w-full object-cover"
           onError={() => setImgFailed(true)}
-          draggable={false}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-700">
+        <div className="flex h-full w-full items-center justify-center text-[9px] font-semibold text-muted">
           {initials(person.name)}
         </div>
       )}
-    </button>
-  );
-}
-
-function UnownedDropHint({ chipId: _chipId, ringColor }: { chipId: string; ringColor: string }) {
-  return (
-    <div
-      style={{ borderColor: ringColor + '99', color: ringColor }}
-      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed text-[10px] italic"
-      title="Unowned — drop a photo here"
-    >
-      ?
     </div>
   );
 }
@@ -249,7 +239,6 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-/** Pick black or white text based on YIQ luminance of the bg color. */
 function pickReadableTextColor(hex: string): string {
   const m = hex.replace('#', '').match(/^([0-9a-f]{6})$/i);
   if (!m) return '#0b0b18';
@@ -260,7 +249,6 @@ function pickReadableTextColor(hex: string): string {
   return yiq >= 150 ? '#0b0b18' : '#ffffff';
 }
 
-/** Darken a hex color by mixing toward near-black. ratio = 0..1, 1 = fully dark. */
 function darken(hex: string, ratio: number): string {
   const m = hex.replace('#', '').match(/^([0-9a-f]{6})$/i);
   if (!m) return hex;
@@ -273,5 +261,4 @@ function darken(hex: string, ratio: number): string {
   return `#${[dr, dg, db].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
-// Expose drop IDs for App.tsx to decode
-export { ownershipChipDragId, chipCardDropId };
+export { topicPmmDragId, topicDropId };
