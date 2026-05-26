@@ -68,8 +68,10 @@ export function PersonCard({ person }: Props) {
           </button>
         </div>
 
-        {/* Sections — 2 columns on wider widths so content fills the card */}
-        <div className="mt-6 grid grid-cols-1 gap-x-8 gap-y-4 md:grid-cols-2">
+        {/* Sections — 2 columns, column-major so left=PMM focus/KPI/Persona,
+            right=Channels/Product/Agentic. grid-rows-3 + grid-flow-col fills
+            the left column first then the right. */}
+        <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-7 md:grid-flow-col md:grid-cols-2 md:grid-rows-3">
           {visibleCategories.map((cat) => (
             <CardSection
               key={cat.id}
