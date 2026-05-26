@@ -409,7 +409,6 @@ function AboutSection() {
 function LatestSection() {
   const items = useStore((s) => s.latest ?? []);
   const addLatestItem = useStore((s) => s.addLatestItem);
-  const removeLatestItem = useStore((s) => s.removeLatestItem);
 
   return (
     <section className="mb-8">
@@ -428,37 +427,84 @@ function LatestSection() {
       {items.length === 0 ? (
         <p className="text-xs italic text-muted">No items yet.</p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5"
-            >
-              <div className="h-7 w-10 overflow-hidden rounded bg-white/5">
-                {item.dataUrl ? (
-                  <img src={item.dataUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-muted">🖼</div>
-                )}
-              </div>
-              <span className="flex-1 truncate text-sm text-ink">
-                {item.title || <em className="text-muted">untitled</em>}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('Remove this item?')) removeLatestItem(item.id);
-                }}
-                className="rounded-full px-1.5 py-0 text-xs text-muted hover:bg-rose-50 hover:text-rose-600"
-                title="Remove"
-              >
-                ×
-              </button>
-            </li>
+            <LatestAdminRow key={item.id} item={item} />
           ))}
         </ul>
       )}
     </section>
+  );
+}
+
+function LatestAdminRow({ item }: { item: import('../types').LatestItem }) {
+  const updateLatestItem = useStore((s) => s.updateLatestItem);
+  const removeLatestItem = useStore((s) => s.removeLatestItem);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const { compressImage } = await import('../lib/image');
+      const dataUrl = await compressImage(file, { maxWidth: 1000, quality: 0.8 });
+      updateLatestItem(item.id, { dataUrl });
+    } catch (err) {
+      alert(`Failed to load image: ${(err as Error).message}`);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  return (
+    <li className="rounded-lg border border-white/10 bg-white/[0.03] p-2">
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="h-10 w-14 shrink-0 overflow-hidden rounded bg-white/5 ring-1 ring-white/10 hover:ring-accent/60"
+          title="Click to upload / replace image"
+        >
+          {item.dataUrl ? (
+            <img src={item.dataUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-xs text-muted">🖼</div>
+          )}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
+
+        <div className="flex-1 space-y-1">
+          <input
+            value={item.title ?? ''}
+            onChange={(e) =>
+              updateLatestItem(item.id, { title: e.target.value.trim() ? e.target.value : undefined })
+            }
+            placeholder="Title…"
+            className="w-full rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-xs text-ink outline-none focus:border-accent/60"
+          />
+          <input
+            type="url"
+            value={item.link ?? ''}
+            onChange={(e) =>
+              updateLatestItem(item.id, { link: e.target.value.trim() ? e.target.value : undefined })
+            }
+            placeholder="https://link-to-asset…"
+            className="w-full rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] text-ink outline-none focus:border-accent/60"
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm('Remove this item?')) removeLatestItem(item.id);
+          }}
+          className="rounded-full px-1.5 py-0 text-xs text-muted hover:bg-rose-500/15 hover:text-rose-300"
+          title="Remove"
+        >
+          ×
+        </button>
+      </div>
+    </li>
   );
 }
 

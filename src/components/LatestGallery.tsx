@@ -85,122 +85,45 @@ function Marquee({ items }: { items: LatestItem[] }) {
 }
 
 function LatestCard({ item }: { item: LatestItem }) {
-  const updateLatestItem = useStore((s) => s.updateLatestItem);
-  const removeLatestItem = useStore((s) => s.removeLatestItem);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [titleDraft, setTitleDraft] = useState(item.title ?? '');
-  const [linkDraft, setLinkDraft] = useState(item.link ?? '');
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [editingLink, setEditingLink] = useState(false);
-
-  useEffect(() => setTitleDraft(item.title ?? ''), [item.title]);
-  useEffect(() => setLinkDraft(item.link ?? ''), [item.link]);
-
-  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const dataUrl = await compressImage(file, { maxWidth: 1000, quality: 0.8 });
-      updateLatestItem(item.id, { dataUrl });
-    } catch (err) {
-      alert(`Failed to load image: ${(err as Error).message}`);
-    } finally {
-      e.target.value = '';
-    }
-  };
+  // Public, read-only display. Edit title / link / image from Admin → Latest.
+  const ImageBody = (
+    <div className="block aspect-[16/10] w-full overflow-hidden">
+      {item.dataUrl ? (
+        <img
+          src={item.dataUrl}
+          alt={item.title || 'Item'}
+          className="h-full w-full object-cover transition-transform group-hover/card:scale-[1.03]"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-white/[0.03] text-2xl text-white/30">
+          🖼
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <article className="group/card card-gradient-subtle relative w-44 shrink-0">
       <div className="card-gradient-inner">
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        className="block aspect-[16/10] w-full overflow-hidden"
-      >
-        {item.dataUrl ? (
-          <img src={item.dataUrl} alt={item.title || 'Item'} className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-white/[0.03] text-2xl text-white/30">🖼</div>
-        )}
-      </button>
-      <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
-
-      <div className="px-2 py-1.5">
-        {editingTitle ? (
-          <input
-            autoFocus
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            onBlur={() => {
-              updateLatestItem(item.id, { title: titleDraft.trim() || undefined });
-              setEditingTitle(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-            }}
-            placeholder="Title…"
-            className="w-full bg-transparent text-xs font-semibold text-ink outline-none border-b border-accent/40"
-          />
-        ) : (
-          <h3
-            className="cursor-text truncate text-xs font-semibold text-ink"
-            onDoubleClick={() => setEditingTitle(true)}
-            title="Double-click to edit"
-          >
-            {item.title || <span className="italic text-muted">Title</span>}
-          </h3>
-        )}
-
-        {editingLink ? (
-          <input
-            autoFocus
-            value={linkDraft}
-            onChange={(e) => setLinkDraft(e.target.value)}
-            onBlur={() => {
-              updateLatestItem(item.id, { link: linkDraft.trim() || undefined });
-              setEditingLink(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-            }}
-            placeholder="https://…"
-            className="mt-0.5 w-full bg-transparent text-[10px] text-ink outline-none border-b border-accent/40"
-          />
-        ) : item.link ? (
+        {item.link ? (
           <a
             href={item.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-0.5 block truncate text-[10px] text-accent hover:underline"
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              setEditingLink(true);
-            }}
+            title={item.title || item.link}
+            className="block"
           >
-            {item.link.replace(/^https?:\/\//, '')}
+            {ImageBody}
           </a>
         ) : (
-          <button
-            type="button"
-            onClick={() => setEditingLink(true)}
-            className="mt-0.5 truncate text-[10px] italic text-muted hover:text-ink"
-          >
-            + link
-          </button>
+          ImageBody
         )}
+        <div className="px-2 py-1.5">
+          <h3 className="truncate text-xs font-semibold text-ink">
+            {item.title || <span className="italic text-muted">Untitled</span>}
+          </h3>
+        </div>
       </div>
-
-      </div>
-      <button
-        type="button"
-        onClick={() => {
-          if (confirm('Remove this item?')) removeLatestItem(item.id);
-        }}
-        title="Remove"
-        className="absolute right-1.5 top-1.5 rounded-full bg-black/60 px-1.5 py-0 text-xs text-muted opacity-0 shadow-sm hover:bg-rose-500/20 hover:text-rose-300 group-hover/card:opacity-100"
-      >
-        ×
-      </button>
     </article>
   );
 }
