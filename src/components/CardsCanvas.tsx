@@ -36,9 +36,11 @@ export function CardsCanvas() {
       </div>
 
       <div className="flex items-stretch gap-5">
-        {/* Left strip: photo carousel — stretches to match card height */}
-        <aside className="w-[96px] shrink-0">
-          <div className="h-full overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 shadow-sm backdrop-blur">
+        {/* Left strip: stretches to match card height. The inner content lives
+            in an absolutely-positioned div so its natural (taller) height
+            doesn't push the flex row taller than the card. */}
+        <aside className="relative w-[96px] shrink-0">
+          <div className="absolute inset-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 shadow-sm backdrop-blur">
             <SortableContext
               items={people.map((p) => personDragId(p.id))}
               strategy={verticalListSortingStrategy}
@@ -57,7 +59,7 @@ export function CardsCanvas() {
           </div>
         </aside>
 
-        {/* Right: expanded card */}
+        {/* Right: expanded card — its content height dictates the row height */}
         <div className="min-w-0 flex-1">
           {selected ? (
             <PersonCard person={selected} />

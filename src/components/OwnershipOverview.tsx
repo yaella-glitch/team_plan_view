@@ -117,15 +117,15 @@ function ChipCard({ chip, people }: { chip: ChipValue; people: Person[] }) {
     <div
       ref={setDropRef}
       className={[
-        'group/card relative aspect-[4/3] overflow-hidden rounded-xl shadow-md transition-all',
+        'group/card relative aspect-[5/2] overflow-hidden rounded-xl shadow-md transition-all',
         isOver ? 'ring-2 ring-accent ring-offset-2 ring-offset-canvas' : '',
       ].join(' ')}
       style={{
         background: `radial-gradient(circle at 30% 40%, ${meta.ownershipColor}, ${darken(meta.ownershipColor, 0.7)} 80%)`,
       }}
     >
-      {/* Label (centered, top of card) */}
-      <div className="absolute inset-x-3 top-3 pr-3">
+      {/* Label (top-left) */}
+      <div className="absolute inset-x-2.5 top-2 pr-12">
         {editing ? (
           <input
             autoFocus
@@ -139,12 +139,12 @@ function ChipCard({ chip, people }: { chip: ChipValue; people: Person[] }) {
                 setEditing(false);
               }
             }}
-            className="w-full bg-transparent text-sm font-bold leading-tight outline-none"
+            className="w-full bg-transparent text-xs font-bold leading-tight outline-none"
             style={{ color: textColor }}
           />
         ) : (
           <h4
-            className="cursor-text text-sm font-bold leading-tight"
+            className="cursor-text text-xs font-bold leading-tight"
             style={{ color: textColor }}
             onDoubleClick={() => setEditing(true)}
             title="Double-click to rename"
@@ -160,7 +160,7 @@ function ChipCard({ chip, people }: { chip: ChipValue; people: Person[] }) {
         onClick={() => {
           if (confirm(`Delete "${chip.label}"?`)) deleteChip(chip.id);
         }}
-        className="absolute right-1.5 top-1.5 rounded-full px-1.5 text-xs opacity-0 transition-opacity group-hover/card:opacity-60 hover:!opacity-100"
+        className="absolute right-1 top-1 rounded-full px-1 text-xs opacity-0 transition-opacity group-hover/card:opacity-60 hover:!opacity-100"
         style={{ color: textColor }}
         title="Delete this ownership area"
       >
@@ -168,7 +168,7 @@ function ChipCard({ chip, people }: { chip: ChipValue; people: Person[] }) {
       </button>
 
       {/* Photo inset in lower-right */}
-      <div className="absolute bottom-2 right-2">
+      <div className="absolute bottom-1.5 right-1.5">
         {owner ? (
           <DraggablePhoto chipId={chip.id} person={owner} ringColor={textColor} />
         ) : (
@@ -205,7 +205,7 @@ function DraggablePhoto({
         opacity: isDragging ? 0.4 : 1,
         boxShadow: `0 0 0 2px ${ringColor}`,
       }}
-      className="block h-10 w-10 cursor-grab overflow-hidden rounded-full bg-white transition-transform hover:scale-110 active:cursor-grabbing"
+      className="block h-8 w-8 cursor-grab overflow-hidden rounded-full bg-white transition-transform hover:scale-110 active:cursor-grabbing"
       title={`${person.name} — drag onto another card to swap`}
       {...listeners}
       {...attributes}
@@ -231,7 +231,7 @@ function UnownedDropHint({ chipId: _chipId, ringColor }: { chipId: string; ringC
   return (
     <div
       style={{ borderColor: ringColor + '99', color: ringColor }}
-      className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed text-[10px] italic"
+      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-dashed text-[10px] italic"
       title="Unowned — drop a photo here"
     >
       ?
