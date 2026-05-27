@@ -878,6 +878,7 @@ function DataSection() {
     about: s.about,
     latest: s.latest,
     subTeams: s.subTeams,
+    topics: s.topics,
   }));
   const replaceState = useStore((s) => s.replaceState);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -892,13 +893,29 @@ function DataSection() {
     URL.revokeObjectURL(url);
   };
 
+  const onExportSnapshot = () => {
+    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'snapshot.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    alert(
+      'snapshot.json downloaded.\n\n' +
+        'Save it into your repo at public/snapshot.json, then commit + push.\n\n' +
+        'Once deployed, any fresh viewer (mobile / teammates with no saved state) ' +
+        'will see this state by default instead of the empty seed.',
+    );
+  };
+
   const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     try {
       const text = await f.text();
       const parsed = JSON.parse(text) as AppState;
-      if (!Array.isArray(parsed.people) || !Array.isArray(parsed.chips)) {
+      if (!Array.isArray(parsed.people)) {
         alert('Invalid file format.');
         return;
       }
@@ -913,25 +930,37 @@ function DataSection() {
   return (
     <section className="mb-8">
       <SectionHeader title="Data" />
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={onExport}
-          className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
+          className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
         >
           ↓ Export JSON
         </button>
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
+          className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
         >
           ↑ Import JSON
         </button>
         <input ref={fileRef} type="file" accept="application/json" onChange={onImport} className="hidden" />
+
+        <button
+          type="button"
+          onClick={onExportSnapshot}
+          className="col-span-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/20"
+        >
+          📸 Publish snapshot for everyone
+        </button>
       </div>
-      <p className="mt-2 text-[11px] text-muted">
-        Export the current plan to share or back up. Import replaces the current plan with the JSON's contents.
+      <p className="mt-2 text-[11px] leading-relaxed text-muted">
+        <b>Export/Import JSON</b> backs up or restores your personal browser state.
+        <br />
+        <b>Publish snapshot</b>: downloads <code className="rounded bg-white/10 px-1">snapshot.json</code>. Put it
+        in <code className="rounded bg-white/10 px-1">public/snapshot.json</code> and push — new viewers (mobile /
+        teammates with no saved state) will see this state by default.
       </p>
     </section>
   );
