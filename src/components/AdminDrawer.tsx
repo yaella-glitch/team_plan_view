@@ -894,7 +894,10 @@ function DataSection() {
   };
 
   const onExportSnapshot = () => {
-    const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
+    // Stamp with a fresh snapshotId so existing viewers' browsers also
+    // detect a new version on next reload.
+    const payload = { ...exported, snapshotId: Date.now().toString() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -904,8 +907,7 @@ function DataSection() {
     alert(
       'snapshot.json downloaded.\n\n' +
         'Save it into your repo at public/snapshot.json, then commit + push.\n\n' +
-        'Once deployed, any fresh viewer (mobile / teammates with no saved state) ' +
-        'will see this state by default instead of the empty seed.',
+        'Every existing viewer will pick up this new snapshot the next time they load the site (snapshotId stamping is automatic).',
     );
   };
 
