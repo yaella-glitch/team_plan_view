@@ -176,12 +176,48 @@ function RAndRBlock({ person }: { person: Person }) {
           </div>
         </div>
       ) : hasContent ? (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{text}</p>
+        <RAndRRender text={text} />
       ) : (
         <p className="text-sm italic text-muted">
           Add roles & responsibilities here — bullets, sub-bullets, anything.
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Render free-text R&R with light markdown-like styling:
+ *   - lines starting with *, -, or • become bulleted items
+ *   - leading whitespace is preserved as visual indentation
+ *   - blank lines render as small gaps
+ *
+ * No external parser; just a lightweight per-line walker.
+ */
+function RAndRRender({ text }: { text: string }) {
+  const lines = text.split(/\r?\n/);
+  return (
+    <div className="text-sm leading-relaxed text-ink">
+      {lines.map((raw, i) => {
+        if (!raw.trim()) {
+          return <div key={i} className="h-2" />;
+        }
+        const indent = raw.length - raw.trimStart().length;
+        const trimmed = raw.trimStart();
+        const bulletMatch = trimmed.match(/^([*\-•–])\s+(.*)$/);
+        const isBullet = !!bulletMatch;
+        const content = bulletMatch ? bulletMatch[2] : trimmed;
+        // Translate every leading space into a small left padding bump.
+        const paddingLeft = `${indent * 0.45}rem`;
+        return (
+          <div key={i} className="flex items-start gap-1.5" style={{ paddingLeft }}>
+            {isBullet && (
+              <span aria-hidden className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+            )}
+            <span className="flex-1 break-words">{content}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
