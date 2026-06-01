@@ -879,6 +879,7 @@ function DataSection() {
     latest: s.latest,
     subTeams: s.subTeams,
     topics: s.topics,
+    heroImage: s.heroImage,
   }));
   const replaceState = useStore((s) => s.replaceState);
   const fileRef = useRef<HTMLInputElement>(null);

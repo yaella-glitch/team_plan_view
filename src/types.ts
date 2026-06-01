@@ -73,4 +73,6 @@ export type AppState = {
   latest: LatestItem[];
   subTeams: SubTeam[];
   topics: Topic[];
+  /** Hero illustration data URL. Kept in state so it travels with snapshots. */
+  heroImage?: string;
 };

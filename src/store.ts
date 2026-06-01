@@ -49,6 +49,9 @@ type Actions = {
   addSubTeamTag: (id: string, tag: string) => void;
   removeSubTeamTag: (id: string, tagIndex: number) => void;
 
+  // Hero
+  setHeroImage: (dataUrl: string | null) => void;
+
   // Topics
   addTopic: (name?: string, category?: Category) => string;
   renameTopic: (id: string, name: string) => void;
@@ -411,6 +414,9 @@ export const useStore = create<Store>()(
           }),
         })),
 
+      // Hero -----------------------------------------------------------------
+      setHeroImage: (dataUrl) => set({ heroImage: dataUrl ?? undefined }),
+
       // Topics ---------------------------------------------------------------
       addTopic: (name = 'New topic', category = 'pmmFocus') => {
         const id = nanoid(8);
@@ -474,7 +480,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'team-plan-view-v1',
-      version: 4,
+      version: 5,
       migrate: (persisted, fromVersion) => {
         const s = (persisted ?? {}) as Partial<AppState> & { chips?: ChipValue[]; people?: Person[]; activeTopicTab?: Category; topics?: Topic[] };
         if (fromVersion < 2) {
@@ -510,6 +516,18 @@ export const useStore = create<Store>()(
               ...t,
               category: (t as Topic).category ?? 'pmmFocus',
             }));
+          }
+        }
+        if (fromVersion < 5) {
+          // v4 → v5: pull the Hero image out of its legacy standalone key into
+          // the main state so it travels with snapshots.
+          try {
+            const legacy = localStorage.getItem('team-plan-view-hero-image-v1');
+            if (legacy && !(s as { heroImage?: string }).heroImage) {
+              (s as { heroImage?: string }).heroImage = legacy;
+            }
+          } catch {
+            // ignore
           }
         }
         return s as AppState;

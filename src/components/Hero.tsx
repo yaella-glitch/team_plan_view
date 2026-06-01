@@ -1,27 +1,12 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { compressImage } from '../lib/image';
-
-const HERO_IMAGE_KEY = 'team-plan-view-hero-image-v1';
-
-function loadHeroImage(): string | null {
-  try {
-    return localStorage.getItem(HERO_IMAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function saveHeroImage(dataUrl: string | null) {
-  try {
-    if (dataUrl) localStorage.setItem(HERO_IMAGE_KEY, dataUrl);
-    else localStorage.removeItem(HERO_IMAGE_KEY);
-  } catch {
-    // ignore
-  }
-}
+import { useStore } from '../store';
+import { useAdminUnlocked } from '../lib/admin';
 
 export function Hero() {
-  const [heroImage, setHeroImage] = useState<string | null>(loadHeroImage);
+  const heroImage = useStore((s) => s.heroImage);
+  const setHeroImage = useStore((s) => s.setHeroImage);
+  const adminUnlocked = useAdminUnlocked();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,7 +15,6 @@ export function Hero() {
     try {
       const url = await compressImage(file, { maxWidth: 1200, quality: 0.85 });
       setHeroImage(url);
-      saveHeroImage(url);
     } catch (err) {
       alert(`Failed to load image: ${(err as Error).message}`);
     } finally {
@@ -66,34 +50,44 @@ export function Hero() {
           </p>
         </div>
 
-        {/* Right: optional hero illustration */}
-        <div className="hidden flex-1 lg:block">
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            className="group relative aspect-square w-full overflow-hidden rounded-3xl"
-            title="Click to set a hero illustration"
-          >
-            {heroImage ? (
-              <img src={heroImage} alt="Team hero illustration" className="h-full w-full object-cover" />
-            ) : (
-              <div
-                className="flex h-full w-full items-center justify-center rounded-3xl border border-dashed text-center text-muted opacity-60 transition-opacity hover:opacity-100"
-                style={{ borderColor: 'rgba(165,138,255,0.3)' }}
+        {/* Right: optional hero illustration. Empty + upload affordance only
+            shown when the editor is logged into Admin — public viewers without
+            a hero image see nothing here (clean). */}
+        {(heroImage || adminUnlocked) && (
+          <div className="hidden flex-1 lg:block">
+            {adminUnlocked ? (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="group relative aspect-square w-full overflow-hidden rounded-3xl"
+                title="Click to set a hero illustration"
               >
-                <div>
-                  <div className="text-5xl">🎨</div>
-                  <p className="mt-2 text-sm">
-                    Click to upload
-                    <br />
-                    hero illustration
-                  </p>
-                </div>
+                {heroImage ? (
+                  <img src={heroImage} alt="Team hero illustration" className="h-full w-full object-cover" />
+                ) : (
+                  <div
+                    className="flex h-full w-full items-center justify-center rounded-3xl border border-dashed text-center text-muted opacity-60 transition-opacity hover:opacity-100"
+                    style={{ borderColor: 'rgba(165,138,255,0.3)' }}
+                  >
+                    <div>
+                      <div className="text-5xl">🎨</div>
+                      <p className="mt-2 text-sm">
+                        Click to upload
+                        <br />
+                        hero illustration
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </button>
+            ) : (
+              <div className="aspect-square w-full overflow-hidden rounded-3xl">
+                <img src={heroImage} alt="Team hero illustration" className="h-full w-full object-cover" />
               </div>
             )}
-          </button>
-          <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
-        </div>
+            <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
+          </div>
+        )}
       </div>
     </section>
   );
