@@ -92,6 +92,7 @@ function Drawer({ onClose }: { onClose: () => void }) {
             <QuickAddSection />
             <PMMsSection />
             <TopicsSection />
+            <HeroSection />
             <AboutSection />
             <LatestSection />
             <SubTeamsSection />
@@ -213,6 +214,33 @@ function QuickAddSection() {
           <div className="flex items-center gap-2">
             <span className="text-xl">📌</span>
             <span>+ Add topic</span>
+          </div>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            // Open file picker for Hero
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = async (ev) => {
+              const file = (ev.target as HTMLInputElement).files?.[0];
+              if (!file) return;
+              try {
+                const { compressImage } = await import('../lib/image');
+                const url = await compressImage(file, { maxWidth: 1200, quality: 0.85 });
+                useStore.getState().setHeroImage(url);
+              } catch (err) {
+                alert(`Failed to load image: ${(err as Error).message}`);
+              }
+            };
+            input.click();
+          }}
+          className={tile}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🎨</span>
+            <span>Hero image</span>
           </div>
         </button>
         <button type="button" onClick={() => addAboutSlide()} className={tile}>
@@ -363,6 +391,73 @@ function ToggleSwitch({ on, onChange, title }: { on: boolean; onChange: () => vo
 }
 
 // ---------------------------------------------------------------------------
+
+function HeroSection() {
+  const heroImage = useStore((s) => s.heroImage);
+  const setHeroImage = useStore((s) => s.setHeroImage);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onPick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const { compressImage } = await import('../lib/image');
+      const url = await compressImage(file, { maxWidth: 1200, quality: 0.85 });
+      setHeroImage(url);
+    } catch (err) {
+      alert(`Failed to load image: ${(err as Error).message}`);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Hero illustration" />
+      <div className="flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-2">
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-white/5 ring-1 ring-white/10 hover:ring-accent/60"
+          title="Click to upload / replace"
+        >
+          {heroImage ? (
+            <img src={heroImage} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-2xl text-muted">🎨</div>
+          )}
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
+        <div className="flex-1 space-y-1.5">
+          <p className="text-[11px] leading-tight text-muted">
+            The illustration on the right side of the homepage hero. Stored with the rest of your team plan
+            data — included in every snapshot you publish.
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-xs text-ink hover:border-accent/60"
+            >
+              {heroImage ? 'Replace' : 'Upload'}
+            </button>
+            {heroImage && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Remove the hero illustration?')) setHeroImage(null);
+                }}
+                className="rounded-full px-2 py-0.5 text-xs text-muted hover:bg-rose-500/15 hover:text-rose-300"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function AboutSection() {
   const about = useStore((s) => s.about ?? [null, null, null]);
