@@ -6,6 +6,14 @@ import { AvatarEditor } from './AvatarEditor';
 import { ADMIN_PASSWORD_HASH } from '../access';
 import { resolvePhotoUrl } from '../lib/photo';
 import { TOPIC_TAB_CATEGORIES, CATEGORY_BY_ID } from '../constants';
+import {
+  getGitHubToken,
+  setGitHubToken,
+  getGitHubRepo,
+  setGitHubRepo,
+  isGitHubConfigured,
+  publishSnapshotToGitHub,
+} from '../lib/github-publish';
 import type { AppState, Category, Person } from '../types';
 
 const ADMIN_UNLOCK_KEY = 'team-plan-view-admin-unlocked-v1';
@@ -979,6 +987,13 @@ function DataSection() {
   const replaceState = useStore((s) => s.replaceState);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [ghConfigured, setGhConfigured] = useState(isGitHubConfigured);
+  const [showGhSetup, setShowGhSetup] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMsg, setPublishMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+  const [tokenDraft, setTokenDraft] = useState(getGitHubToken);
+  const [repoDraft, setRepoDraft] = useState(getGitHubRepo);
+
   const onExport = () => {
     const blob = new Blob([JSON.stringify(exported, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -990,8 +1005,6 @@ function DataSection() {
   };
 
   const onExportSnapshot = () => {
-    // Stamp with a fresh snapshotId so existing viewers' browsers also
-    // detect a new version on next reload.
     const payload = { ...exported, snapshotId: Date.now().toString() };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1000,11 +1013,37 @@ function DataSection() {
     a.download = 'snapshot.json';
     a.click();
     URL.revokeObjectURL(url);
-    alert(
-      'snapshot.json downloaded.\n\n' +
-        'Save it into your repo at public/snapshot.json, then commit + push.\n\n' +
-        'Every existing viewer will pick up this new snapshot the next time they load the site (snapshotId stamping is automatic).',
-    );
+  };
+
+  const onPublishToGitHub = async () => {
+    setPublishing(true);
+    setPublishMsg(null);
+    try {
+      const payload = { ...exported, snapshotId: Date.now().toString() };
+      const commitUrl = await publishSnapshotToGitHub(payload);
+      setPublishMsg({
+        kind: 'ok',
+        text: `Published! Site will refresh in ~1 min. ${commitUrl ? '(commit pushed)' : ''}`.trim(),
+      });
+    } catch (err) {
+      setPublishMsg({ kind: 'err', text: (err as Error).message });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const saveGhConfig = () => {
+    setGitHubToken(tokenDraft.trim());
+    setGitHubRepo(repoDraft.trim());
+    setGhConfigured(isGitHubConfigured());
+    setShowGhSetup(false);
+  };
+
+  const disconnectGh = () => {
+    if (!confirm('Remove the saved GitHub token from this browser?')) return;
+    setGitHubToken('');
+    setTokenDraft('');
+    setGhConfigured(false);
   };
 
   const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1027,39 +1066,140 @@ function DataSection() {
 
   return (
     <section className="mb-8">
-      <SectionHeader title="Data" />
-      <div className="grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={onExport}
-          className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
-        >
-          ↓ Export JSON
-        </button>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
-        >
-          ↑ Import JSON
-        </button>
-        <input ref={fileRef} type="file" accept="application/json" onChange={onImport} className="hidden" />
+      <SectionHeader title="Publish" />
 
-        <button
-          type="button"
-          onClick={onExportSnapshot}
-          className="col-span-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/20"
-        >
-          📸 Publish snapshot for everyone
-        </button>
-      </div>
-      <p className="mt-2 text-[11px] leading-relaxed text-muted">
-        <b>Export/Import JSON</b> backs up or restores your personal browser state.
-        <br />
-        <b>Publish snapshot</b>: downloads <code className="rounded bg-white/10 px-1">snapshot.json</code>. Put it
-        in <code className="rounded bg-white/10 px-1">public/snapshot.json</code> and push — new viewers (mobile /
-        teammates with no saved state) will see this state by default.
-      </p>
+      {/* GitHub auto-publish — the headline action */}
+      {ghConfigured && !showGhSetup ? (
+        <div className="rounded-lg border border-accent/40 bg-accent/[0.06] p-3">
+          <div className="mb-2 flex items-center gap-2 text-[11px] text-muted">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Connected to <code className="rounded bg-white/10 px-1">{getGitHubRepo()}</code>
+            <button
+              type="button"
+              onClick={() => {
+                setTokenDraft(getGitHubToken());
+                setRepoDraft(getGitHubRepo());
+                setShowGhSetup(true);
+              }}
+              className="ml-auto text-muted hover:text-ink"
+              title="Edit GitHub config"
+            >
+              ⚙
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onPublishToGitHub}
+            disabled={publishing}
+            className="w-full rounded-lg bg-accent px-3 py-3 text-sm font-semibold text-canvas hover:opacity-90 disabled:opacity-50"
+          >
+            {publishing ? 'Publishing…' : '🚀 Publish to everyone now'}
+          </button>
+          {publishMsg && (
+            <p
+              className={[
+                'mt-2 text-[11px]',
+                publishMsg.kind === 'ok' ? 'text-emerald-300' : 'text-rose-300',
+              ].join(' ')}
+            >
+              {publishMsg.text}
+            </p>
+          )}
+          <p className="mt-2 text-[11px] leading-relaxed text-muted">
+            One click → pushes your current state to GitHub → site refreshes in ~1 minute. Everyone with the
+            link sees the update.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+          <p className="mb-2 text-sm font-medium text-ink">One-time GitHub setup</p>
+          <p className="mb-3 text-[11px] leading-relaxed text-muted">
+            Saves a GitHub token in this browser so you can publish updates with one click. The token never
+            leaves your machine and only YOU see this Admin panel.
+            <br />
+            <a
+              href="https://github.com/settings/tokens/new?scopes=public_repo&description=team_plan_view%20publish"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:underline"
+            >
+              ➜ Create a token (1 click)
+            </a>
+            , set scope <code className="rounded bg-white/10 px-1">public_repo</code>, copy and paste below.
+          </p>
+          <input
+            type="password"
+            placeholder="GitHub token (ghp_…)"
+            value={tokenDraft}
+            onChange={(e) => setTokenDraft(e.target.value)}
+            className="mb-2 w-full rounded border border-white/15 bg-white/[0.04] px-2 py-1.5 text-xs text-ink outline-none focus:border-accent/60"
+          />
+          <input
+            type="text"
+            placeholder="owner/repo"
+            value={repoDraft}
+            onChange={(e) => setRepoDraft(e.target.value)}
+            className="mb-2 w-full rounded border border-white/15 bg-white/[0.04] px-2 py-1.5 text-xs text-ink outline-none focus:border-accent/60"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={saveGhConfig}
+              disabled={!tokenDraft.trim() || !repoDraft.includes('/')}
+              className="flex-1 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-canvas hover:opacity-90 disabled:opacity-50"
+            >
+              Save
+            </button>
+            {ghConfigured && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowGhSetup(false)}
+                  className="rounded-lg border border-white/15 px-3 py-2 text-sm text-muted hover:text-ink"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={disconnectGh}
+                  className="rounded-lg border border-rose-400/30 px-3 py-2 text-sm text-rose-300 hover:bg-rose-500/15"
+                >
+                  Disconnect
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Fallback: manual download + import — still available */}
+      <details className="mt-3">
+        <summary className="cursor-pointer text-[11px] text-muted hover:text-ink">Advanced (manual file)</summary>
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onExport}
+            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
+          >
+            ↓ Export JSON
+          </button>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
+          >
+            ↑ Import JSON
+          </button>
+          <input ref={fileRef} type="file" accept="application/json" onChange={onImport} className="hidden" />
+          <button
+            type="button"
+            onClick={onExportSnapshot}
+            className="col-span-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-ink hover:border-accent/40"
+          >
+            📥 Download snapshot.json (then commit manually)
+          </button>
+        </div>
+      </details>
     </section>
   );
 }
