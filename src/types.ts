@@ -25,6 +25,8 @@ export type Person = {
   /** Soft hide — when false, person is filtered out of all display views.
    *  Treat undefined as true (legacy persisted state has no field). */
   enabled?: boolean;
+  /** Free-text roles & responsibilities. Multi-line. Admin-only editable. */
+  rAndR?: string;
 };
 
 export type AboutImage = {
