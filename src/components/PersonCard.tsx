@@ -1,34 +1,32 @@
 import { useEffect, useState } from 'react';
 import type { Person } from '../types';
-import { CATEGORIES } from '../constants';
 import { useStore } from '../store';
-import { CardSection } from './CardSection';
 import { AvatarEditor } from './AvatarEditor';
 import { useAdminUnlocked } from '../lib/admin';
+import { EditableTags, EditableLine, EditableMultiline, BulletText } from './InlineEditors';
 
 type Props = { person: Person };
 
 export function PersonCard({ person }: Props) {
-  const allTopics = useStore((s) => s.topics ?? []);
   const updatePerson = useStore((s) => s.updatePerson);
-  const hideCategoryForPerson = useStore((s) => s.hideCategoryForPerson);
-  const showCategoryForPerson = useStore((s) => s.showCategoryForPerson);
   const removePerson = useStore((s) => s.removePerson);
+  const admin = useAdminUnlocked();
 
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(person.name);
+  useEffect(() => setDraftName(person.name), [person.name]);
 
-  const visibleCategories = CATEGORIES.filter((c) => !person.hiddenCategories.includes(c.id));
-  const hiddenCategories = CATEGORIES.filter((c) => person.hiddenCategories.includes(c.id));
+  // Tag color for all card tags — purple/accent outline per Yaella's mockup
+  const tagHex = 'rgb(165 138 255)'; // matches --accent purple
 
   return (
     <div className="card-gradient group">
-      <article className="card-gradient-inner relative flex min-h-[560px] flex-col p-8">
+      <article className="card-gradient-inner relative flex min-h-[640px] flex-col p-8">
         {/* Header */}
-        <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+        <div className="flex items-start gap-4 border-b border-white/5 pb-6">
           <AvatarEditor person={person} size={80} className="shrink-0" />
           <div className="min-w-0 flex-1">
-            {editingName ? (
+            {editingName && admin ? (
               <input
                 autoFocus
                 value={draftName}
@@ -49,87 +47,147 @@ export function PersonCard({ person }: Props) {
               />
             ) : (
               <h3
-                className="cursor-text truncate text-3xl font-semibold leading-tight text-ink"
-                onDoubleClick={() => setEditingName(true)}
-                title="Double-click to rename"
+                className={['truncate text-3xl font-semibold leading-tight text-ink', admin ? 'cursor-text' : ''].join(' ')}
+                onDoubleClick={() => admin && setEditingName(true)}
+                title={admin ? 'Double-click to rename' : undefined}
               >
                 {person.name}
               </h3>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (confirm(`Remove ${person.name} from the team?`)) removePerson(person.id);
-            }}
-            title="Remove person"
-            className="rounded-full px-2 py-0.5 text-xs text-muted opacity-0 hover:bg-rose-500/10 hover:text-rose-400 group-hover:opacity-100"
-          >
-            ×
-          </button>
-        </div>
 
-        {/* Sections — 2 columns, column-major so left=PMM focus/KPI/Persona,
-            right=Channels/Product/Agentic. grid-rows-3 + grid-flow-col fills
-            the left column first then the right. */}
-        <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-7 md:grid-flow-col md:grid-cols-2 md:grid-rows-3">
-          {visibleCategories.map((cat) => (
-            <CardSection
-              key={cat.id}
-              ownerId={person.id}
-              category={cat.id}
-              topics={allTopics
-                .filter((t) => t.category === cat.id && t.pmmIds.includes(person.id))
-                .sort((a, b) => a.order - b.order)}
-              onRemoveSection={() => hideCategoryForPerson(person.id, cat.id)}
-            />
-          ))}
-        </div>
-
-        {/* Add-section menu */}
-        {hiddenCategories.length > 0 && (
-          <details className="mt-3 text-xs">
-            <summary className="cursor-pointer text-muted hover:text-ink">+</summary>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {hiddenCategories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => showCategoryForPerson(person.id, cat.id)}
-                  className="rounded-full border border-border bg-white/5 px-2 py-0.5 text-ink hover:border-accent/50"
-                >
-                  {cat.icon} {cat.label}
-                </button>
-              ))}
+          {/* Business KPI mini-card, top-right */}
+          <div className="hidden w-64 shrink-0 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:block">
+            <div className="text-[11px] font-bold uppercase tracking-wide text-muted">Business KPI</div>
+            <div className="mt-1">
+              <EditableLine
+                value={person.businessKpi ?? ''}
+                onChange={(v) => updatePerson(person.id, { businessKpi: v.trim() || undefined })}
+                admin={admin}
+                placeholder="free text"
+              />
             </div>
-          </details>
-        )}
+          </div>
 
-        {/* Your R&R — free-text notes. Editable only when Admin is unlocked. */}
-        <RAndRBlock person={person} />
+          {admin && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm(`Remove ${person.name} from the team?`)) removePerson(person.id);
+              }}
+              title="Remove person"
+              className="rounded-full px-2 py-0.5 text-xs text-muted opacity-0 hover:bg-rose-500/10 hover:text-rose-400 group-hover:opacity-100"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Two-column body */}
+        <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-7 md:grid-cols-2">
+          {/* LEFT column */}
+          <div className="space-y-6">
+            <Field label="Goal">
+              <EditableLine
+                value={person.goal ?? ''}
+                onChange={(v) => updatePerson(person.id, { goal: v.trim() || undefined })}
+                admin={admin}
+                placeholder="free text"
+              />
+            </Field>
+
+            <Field label="Who">
+              <EditableTags
+                values={person.whoPersonas ?? []}
+                onChange={(next) => updatePerson(person.id, { whoPersonas: next })}
+                admin={admin}
+                hex={tagHex}
+              />
+            </Field>
+
+            <Field label="How" sublabel="(Key focuses)">
+              <EditableMultiline
+                value={person.howKeyFocuses ?? ''}
+                onChange={(v) => updatePerson(person.id, { howKeyFocuses: v })}
+                admin={admin}
+                placeholder={'• [free text]\n• [free text]\n• [free text]'}
+              />
+            </Field>
+          </div>
+
+          {/* RIGHT column */}
+          <div className="space-y-6">
+            <Field label="Where" sublabel="(channels)">
+              <EditableTags
+                values={person.whereChannels ?? []}
+                onChange={(next) => updatePerson(person.id, { whereChannels: next })}
+                admin={admin}
+                hex={tagHex}
+              />
+            </Field>
+
+            <Field label="Product focus">
+              <EditableTags
+                values={person.productFocus ?? []}
+                onChange={(next) => updatePerson(person.id, { productFocus: next })}
+                admin={admin}
+                hex={tagHex}
+              />
+            </Field>
+
+            <Field label="Agents">
+              <EditableTags
+                values={person.agents ?? []}
+                onChange={(next) => updatePerson(person.id, { agents: next })}
+                admin={admin}
+                hex={tagHex}
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* Your R&R — admin-only edit, public read */}
+        <RAndRBlock person={person} admin={admin} />
       </article>
     </div>
   );
 }
 
-function RAndRBlock({ person }: { person: Person }) {
+function Field({
+  label,
+  sublabel,
+  children,
+}: {
+  label: string;
+  sublabel?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h4 className="mb-1.5 text-base font-bold text-ink">
+        {label}{' '}
+        {sublabel && <span className="text-sm font-normal text-muted">{sublabel}</span>}
+      </h4>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function RAndRBlock({ person, admin }: { person: Person; admin: boolean }) {
   const updatePerson = useStore((s) => s.updatePerson);
-  const adminUnlocked = useAdminUnlocked();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(person.rAndR ?? '');
   useEffect(() => setDraft(person.rAndR ?? ''), [person.rAndR]);
 
   const text = person.rAndR ?? '';
   const hasContent = text.trim().length > 0;
-
-  // Public viewer with no R&R yet: hide the whole section
-  if (!adminUnlocked && !hasContent) return null;
+  if (!admin && !hasContent) return null;
 
   return (
     <div className="mt-8 border-t border-white/5 pt-6">
       <div className="mb-2 flex items-baseline gap-2">
         <h4 className="text-base font-bold text-ink">Your R&R:</h4>
-        {adminUnlocked && !editing && (
+        {admin && !editing && (
           <button
             type="button"
             onClick={() => setEditing(true)}
@@ -140,16 +198,14 @@ function RAndRBlock({ person }: { person: Person }) {
         )}
       </div>
 
-      {editing && adminUnlocked ? (
+      {editing && admin ? (
         <div>
           <textarea
             autoFocus
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={8}
-            placeholder={
-              '• Main responsibility one\n  – sub point\n  – sub point\n• Main responsibility two\n  – sub point'
-            }
+            placeholder={'• Main responsibility one\n  – sub point\n• Main responsibility two'}
             className="w-full whitespace-pre-wrap rounded-lg border border-white/15 bg-white/[0.04] p-3 text-sm leading-relaxed text-ink outline-none focus:border-accent/60"
           />
           <div className="mt-2 flex justify-end gap-2">
@@ -176,48 +232,10 @@ function RAndRBlock({ person }: { person: Person }) {
           </div>
         </div>
       ) : hasContent ? (
-        <RAndRRender text={text} />
+        <BulletText text={text} />
       ) : (
-        <p className="text-sm italic text-muted">
-          Add roles & responsibilities here — bullets, sub-bullets, anything.
-        </p>
+        <p className="text-sm italic text-muted">Add roles & responsibilities here.</p>
       )}
-    </div>
-  );
-}
-
-/**
- * Render free-text R&R with light markdown-like styling:
- *   - lines starting with *, -, or • become bulleted items
- *   - leading whitespace is preserved as visual indentation
- *   - blank lines render as small gaps
- *
- * No external parser; just a lightweight per-line walker.
- */
-function RAndRRender({ text }: { text: string }) {
-  const lines = text.split(/\r?\n/);
-  return (
-    <div className="text-sm leading-relaxed text-ink">
-      {lines.map((raw, i) => {
-        if (!raw.trim()) {
-          return <div key={i} className="h-2" />;
-        }
-        const indent = raw.length - raw.trimStart().length;
-        const trimmed = raw.trimStart();
-        const bulletMatch = trimmed.match(/^([*\-•–])\s+(.*)$/);
-        const isBullet = !!bulletMatch;
-        const content = bulletMatch ? bulletMatch[2] : trimmed;
-        // Translate every leading space into a small left padding bump.
-        const paddingLeft = `${indent * 0.45}rem`;
-        return (
-          <div key={i} className="flex items-start gap-1.5" style={{ paddingLeft }}>
-            {isBullet && (
-              <span aria-hidden className="mt-1 inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-            )}
-            <span className="flex-1 break-words">{content}</span>
-          </div>
-        );
-      })}
     </div>
   );
 }

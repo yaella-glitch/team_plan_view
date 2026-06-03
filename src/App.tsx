@@ -14,7 +14,7 @@ import { About } from './components/About';
 import { LatestGallery } from './components/LatestGallery';
 import { OwnershipOverview } from './components/OwnershipOverview';
 import { CardsCanvas } from './components/CardsCanvas';
-import { SubTeamsCanvas, UNASSIGNED_DROP_ID } from './components/SubTeamsCanvas';
+import { SubTeamsCanvas, parseSubTeamDropId, parseMemberDragId } from './components/SubTeamsCanvas';
 import { Backlog } from './components/Backlog';
 import { AdminDrawer } from './components/AdminDrawer';
 import { applyPaletteToCss, useTheme } from './theme';
@@ -47,8 +47,8 @@ export default function App() {
     if (idStr.startsWith('chip:')) {
       setActiveChipId(decodeChipDragId(idStr));
     } else if (idStr.startsWith('member:')) {
-      const personId = e.active.data.current?.personId as string | undefined;
-      if (personId) setActiveMemberId(personId);
+      const drag = parseMemberDragId(idStr);
+      if (drag) setActiveMemberId(drag.personId);
     } else if (idStr.startsWith('person:')) {
       setActivePersonId(idStr.slice('person:'.length));
     } else if (idStr.startsWith('topic-pmm:')) {
@@ -129,22 +129,20 @@ export default function App() {
       return;
     }
 
-    // CASE 3: sub-team member drag
+    // CASE 3: sub-team member drag — slot-aware
     if (activeIdStr.startsWith('member:')) {
-      const personId = e.active.data.current?.personId as string | undefined;
-      if (!personId) return;
-      if (overIdStr === UNASSIGNED_DROP_ID) {
-        moveMemberToSubTeam(personId, null);
-        return;
-      }
-      if (overIdStr.startsWith('subteam-manager:')) {
-        const subTeamId = overIdStr.slice('subteam-manager:'.length);
-        useStore.getState().setSubTeamManager(subTeamId, personId);
-        return;
-      }
-      if (overIdStr.startsWith('subteam-members:')) {
-        const subTeamId = overIdStr.slice('subteam-members:'.length);
-        moveMemberToSubTeam(personId, subTeamId);
+      const drag = parseMemberDragId(activeIdStr);
+      if (!drag) return;
+      const drop = parseSubTeamDropId(overIdStr);
+      if (!drop) return;
+      // Honor the DROP slot (so source/target slot tracking works)
+      const slot = drop.slot;
+      if (drop.kind === 'unassigned') {
+        moveMemberToSubTeam(drag.personId, null, slot);
+      } else if (drop.kind === 'manager') {
+        useStore.getState().setSubTeamManager(drop.subTeamId, drag.personId, slot);
+      } else if (drop.kind === 'members') {
+        moveMemberToSubTeam(drag.personId, drop.subTeamId, slot);
       }
     }
   };
@@ -169,7 +167,8 @@ export default function App() {
         <LatestGallery />
         <OwnershipOverview />
         <CardsCanvas />
-        <SubTeamsCanvas />
+        <SubTeamsCanvas slot="main" title="Professional pods" />
+        <SubTeamsCanvas slot="second" title="Professional pods — alternate structure" />
         <Backlog />
         <AdminDrawer />
       </main>

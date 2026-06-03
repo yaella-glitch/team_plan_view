@@ -39,15 +39,15 @@ type Actions = {
   updateLatestItem: (id: string, patch: Partial<LatestItem>) => void;
   removeLatestItem: (id: string) => void;
 
-  // Sub-teams
-  addSubTeam: (title?: string, kind?: 'normal' | 'crossCut') => string;
-  updateSubTeamTitle: (id: string, title: string) => void;
-  removeSubTeam: (id: string) => void;
-  moveMemberToSubTeam: (personId: string, subTeamId: string | null) => void;
-  setSubTeamManager: (subTeamId: string, personId: string | null) => void;
-  setSubTeamGoalText: (id: string, text: string) => void;
-  addSubTeamTag: (id: string, tag: string) => void;
-  removeSubTeamTag: (id: string, tagIndex: number) => void;
+  // Sub-teams — `slot` selects which array. Default 'main'. New 'second' for the cloned section.
+  addSubTeam: (title?: string, kind?: 'normal' | 'crossCut', slot?: SubTeamSlot) => string;
+  updateSubTeamTitle: (id: string, title: string, slot?: SubTeamSlot) => void;
+  removeSubTeam: (id: string, slot?: SubTeamSlot) => void;
+  moveMemberToSubTeam: (personId: string, subTeamId: string | null, slot?: SubTeamSlot) => void;
+  setSubTeamManager: (subTeamId: string, personId: string | null, slot?: SubTeamSlot) => void;
+  setSubTeamGoalText: (id: string, text: string, slot?: SubTeamSlot) => void;
+  addSubTeamTag: (id: string, tag: string, slot?: SubTeamSlot) => void;
+  removeSubTeamTag: (id: string, tagIndex: number, slot?: SubTeamSlot) => void;
 
   // Hero
   setHeroImage: (dataUrl: string | null) => void;
@@ -65,6 +65,9 @@ type Actions = {
   replaceState: (s: AppState) => void;
   resetToSeed: () => void;
 };
+
+export type SubTeamSlot = 'main' | 'second';
+const slotKey = (slot: SubTeamSlot): 'subTeams' | 'subTeams2' => (slot === 'second' ? 'subTeams2' : 'subTeams');
 
 type Store = AppState & Actions;
 
@@ -326,17 +329,18 @@ export const useStore = create<Store>()(
         set((state) => ({ latest: (state.latest ?? []).filter((i) => i.id !== id) })),
 
       // Sub-teams
-      addSubTeam: (title = 'New pod', kind = 'normal') => {
+      addSubTeam: (title = 'New pod', kind = 'normal', slot: SubTeamSlot = 'main') => {
         const id = nanoid(8);
+        const key = slotKey(slot);
         set((state) => ({
-          subTeams: [
-            ...(state.subTeams ?? []),
+          [key]: [
+            ...(state[key] ?? []),
             {
               id,
               title,
               managerId: null,
               memberIds: [],
-              order: (state.subTeams ?? []).length,
+              order: (state[key] ?? []).length,
               kind,
               goalText: '',
               tags: [],
@@ -345,15 +349,20 @@ export const useStore = create<Store>()(
         }));
         return id;
       },
-      updateSubTeamTitle: (id, title) =>
+      updateSubTeamTitle: (id, title, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
         set((state) => ({
-          subTeams: (state.subTeams ?? []).map((s) => (s.id === id ? { ...s, title } : s)),
-        })),
-      removeSubTeam: (id) =>
-        set((state) => ({ subTeams: (state.subTeams ?? []).filter((s) => s.id !== id) })),
-      moveMemberToSubTeam: (personId, subTeamId) =>
+          [key]: (state[key] ?? []).map((s) => (s.id === id ? { ...s, title } : s)),
+        }));
+      },
+      removeSubTeam: (id, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        set((state) => ({ [key]: (state[key] ?? []).filter((s) => s.id !== id) }));
+      },
+      moveMemberToSubTeam: (personId, subTeamId, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
         set((state) => ({
-          subTeams: (state.subTeams ?? []).map((s) => {
+          [key]: (state[key] ?? []).map((s) => {
             const cleanedManager = s.managerId === personId ? null : s.managerId;
             const cleanedMembers = s.memberIds.filter((m) => m !== personId);
             if (s.id === subTeamId) {
@@ -365,34 +374,40 @@ export const useStore = create<Store>()(
             }
             return { ...s, managerId: cleanedManager, memberIds: cleanedMembers };
           }),
-        })),
-      setSubTeamGoalText: (id, text) =>
+        }));
+      },
+      setSubTeamGoalText: (id, text, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
         set((state) => ({
-          subTeams: (state.subTeams ?? []).map((s) => (s.id === id ? { ...s, goalText: text } : s)),
-        })),
-      addSubTeamTag: (id, tag) =>
+          [key]: (state[key] ?? []).map((s) => (s.id === id ? { ...s, goalText: text } : s)),
+        }));
+      },
+      addSubTeamTag: (id, tag, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
         set((state) => ({
-          subTeams: (state.subTeams ?? []).map((s) =>
+          [key]: (state[key] ?? []).map((s) =>
             s.id === id ? { ...s, tags: [...(s.tags ?? []), tag] } : s,
           ),
-        })),
-      removeSubTeamTag: (id, tagIndex) =>
+        }));
+      },
+      removeSubTeamTag: (id, tagIndex, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
         set((state) => ({
-          subTeams: (state.subTeams ?? []).map((s) => {
+          [key]: (state[key] ?? []).map((s) => {
             if (s.id !== id) return s;
             const next = [...(s.tags ?? [])];
             next.splice(tagIndex, 1);
             return { ...s, tags: next };
           }),
-        })),
-      setSubTeamManager: (subTeamId, personId) =>
+        }));
+      },
+      setSubTeamManager: (subTeamId, personId, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
         set((state) => ({
-          subTeams: (state.subTeams ?? []).map((s) => {
-            // Remove personId from any other sub-team first.
+          [key]: (state[key] ?? []).map((s) => {
             const cleanedManager = s.managerId === personId ? null : s.managerId;
             const cleanedMembers = s.memberIds.filter((m) => m !== personId);
             if (s.id === subTeamId) {
-              // The previous manager (if any) is demoted to a member, unless we're clearing.
               if (personId === null) {
                 const ex = s.managerId;
                 return {
@@ -412,7 +427,8 @@ export const useStore = create<Store>()(
             }
             return { ...s, managerId: cleanedManager, memberIds: cleanedMembers };
           }),
-        })),
+        }));
+      },
 
       // Hero -----------------------------------------------------------------
       setHeroImage: (dataUrl) => set({ heroImage: dataUrl ?? undefined }),
@@ -480,7 +496,7 @@ export const useStore = create<Store>()(
     }),
     {
       name: 'team-plan-view-v1',
-      version: 5,
+      version: 6,
       migrate: (persisted, fromVersion) => {
         const s = (persisted ?? {}) as Partial<AppState> & { chips?: ChipValue[]; people?: Person[]; activeTopicTab?: Category; topics?: Topic[] };
         if (fromVersion < 2) {
@@ -528,6 +544,12 @@ export const useStore = create<Store>()(
             }
           } catch {
             // ignore
+          }
+        }
+        if (fromVersion < 6) {
+          // v5 → v6: introduce subTeams2 (default empty).
+          if (!Array.isArray((s as { subTeams2?: unknown }).subTeams2)) {
+            (s as { subTeams2: SubTeam[] }).subTeams2 = [];
           }
         }
         return s as AppState;

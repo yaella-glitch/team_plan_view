@@ -27,6 +27,22 @@ export type Person = {
   enabled?: boolean;
   /** Free-text roles & responsibilities. Multi-line. Admin-only editable. */
   rAndR?: string;
+
+  // --- New Full card fields (decoupled from Topics) ---
+  /** Single-line goal description. */
+  goal?: string;
+  /** Persona tags (free-text strings). */
+  whoPersonas?: string[];
+  /** "How" key focuses — multi-line free text with bullets. */
+  howKeyFocuses?: string;
+  /** Short Business KPI description. */
+  businessKpi?: string;
+  /** Channel tags. */
+  whereChannels?: string[];
+  /** Product focus tags. */
+  productFocus?: string[];
+  /** Agent tags. */
+  agents?: string[];
 };
 
 export type AboutImage = {
@@ -72,6 +88,7 @@ export type AppState = {
   about: (AboutImage | null)[]; // 3 slots
   latest: LatestItem[];
   subTeams: SubTeam[];
+  subTeams2: SubTeam[];
   topics: Topic[];
   /** Hero illustration data URL. Kept in state so it travels with snapshots. */
   heroImage?: string;

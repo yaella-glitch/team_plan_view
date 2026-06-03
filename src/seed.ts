@@ -203,6 +203,7 @@ export function buildSeed(): AppState {
     about: [null, null, null],
     latest: [],
     subTeams: [],
+    subTeams2: [],
     topics: buildSeedTopics(),
   };
 }

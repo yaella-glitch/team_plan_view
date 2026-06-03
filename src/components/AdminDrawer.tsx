@@ -209,13 +209,25 @@ function QuickAddSection() {
         <button type="button" onClick={() => addSubTeam()} className={tile}>
           <div className="flex items-center gap-2">
             <span className="text-xl">🟪</span>
-            <span>+ Add pod</span>
+            <span>+ Pod (main)</span>
           </div>
         </button>
         <button type="button" onClick={() => addSubTeam('New cross pod', 'crossCut')} className={tile}>
           <div className="flex items-center gap-2">
             <span className="text-xl">⬌</span>
-            <span>+ Add cross pod</span>
+            <span>+ Cross pod (main)</span>
+          </div>
+        </button>
+        <button type="button" onClick={() => addSubTeam('New pod', 'normal', 'second')} className={tile}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🟦</span>
+            <span>+ Pod (alternate)</span>
+          </div>
+        </button>
+        <button type="button" onClick={() => addSubTeam('New cross pod', 'crossCut', 'second')} className={tile}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">⇄</span>
+            <span>+ Cross pod (alternate)</span>
           </div>
         </button>
         <button type="button" onClick={() => { const name = prompt('New topic name?'); if (name && name.trim()) addTopic(name.trim()); }} className={tile}>
@@ -816,43 +828,40 @@ function TopicAdminRow({
 // ---------------------------------------------------------------------------
 
 function SubTeamsSection() {
-  const subTeams = useStore((s) => s.subTeams ?? []);
+  const subTeamsMain = useStore((s) => s.subTeams ?? []);
+  const subTeamsSecond = useStore((s) => s.subTeams2 ?? []);
   const addSubTeam = useStore((s) => s.addSubTeam);
   const removeSubTeam = useStore((s) => s.removeSubTeam);
 
-  return (
-    <section className="mb-8">
-      <SectionHeader
-        title="Sub-teams"
-        action={
-          <button
-            type="button"
-            onClick={() => addSubTeam()}
-            className="rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-0.5 text-xs text-muted hover:border-accent/60 hover:text-ink"
-          >
-            + Add
-          </button>
-        }
-      />
-      {subTeams.length === 0 ? (
-        <p className="text-xs italic text-muted">No sub-teams yet.</p>
+  const renderList = (pods: typeof subTeamsMain, slot: 'main' | 'second', label: string) => (
+    <div className="mb-4">
+      <div className="mb-1.5 flex items-center justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</span>
+        <button
+          type="button"
+          onClick={() => addSubTeam('New pod', 'normal', slot)}
+          className="rounded-full border border-white/15 bg-white/[0.05] px-2 py-0 text-[11px] text-muted hover:border-accent/60 hover:text-ink"
+        >
+          + pod
+        </button>
+      </div>
+      {pods.length === 0 ? (
+        <p className="text-[11px] italic text-muted">— empty</p>
       ) : (
         <ul className="space-y-1.5">
-          {subTeams.map((st) => (
+          {pods.map((st) => (
             <li
               key={st.id}
               className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5"
             >
               <span className="flex-1 truncate text-sm text-ink">{st.title}</span>
-              <span className="text-[11px] text-muted">
-                {st.memberIds.length + (st.managerId ? 1 : 0)}
-              </span>
+              <span className="text-[11px] text-muted">{st.memberIds.length + (st.managerId ? 1 : 0)}</span>
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm(`Remove sub-team "${st.title}"?`)) removeSubTeam(st.id);
+                  if (confirm(`Remove pod "${st.title}"?`)) removeSubTeam(st.id, slot);
                 }}
-                className="rounded-full px-1.5 py-0 text-xs text-muted hover:bg-rose-50 hover:text-rose-600"
+                className="rounded-full px-1.5 py-0 text-xs text-muted hover:bg-rose-500/15 hover:text-rose-300"
                 title="Remove"
               >
                 ×
@@ -861,6 +870,14 @@ function SubTeamsSection() {
           ))}
         </ul>
       )}
+    </div>
+  );
+
+  return (
+    <section className="mb-8">
+      <SectionHeader title="Sub-teams" />
+      {renderList(subTeamsMain, 'main', 'Main pods')}
+      {renderList(subTeamsSecond, 'second', 'Alternate pods')}
     </section>
   );
 }
@@ -981,6 +998,7 @@ function DataSection() {
     about: s.about,
     latest: s.latest,
     subTeams: s.subTeams,
+    subTeams2: s.subTeams2,
     topics: s.topics,
     heroImage: s.heroImage,
   }));

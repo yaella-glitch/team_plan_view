@@ -5,7 +5,7 @@ import { PasswordGate } from './components/PasswordGate';
 import './styles.css';
 
 const STORE_KEY = 'team-plan-view-v1';
-const STORE_VERSION = 5;
+const STORE_VERSION = 6;
 const SNAPSHOT_APPLIED_KEY = 'team-plan-view-snapshot-id';
 
 /**

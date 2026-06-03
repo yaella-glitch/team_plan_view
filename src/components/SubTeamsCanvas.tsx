@@ -2,17 +2,24 @@ import { useEffect, useState } from 'react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { useStore, selectVisiblePeople } from '../store';
+import type { SubTeamSlot } from '../store';
 import { resolvePhotoUrl } from '../lib/photo';
 import type { Person, SubTeam } from '../types';
 
-const UNASSIGNED_DROP_ID = 'subteam:unassigned';
-const subteamMembersDropId = (id: string) => `subteam-members:${id}`;
-const subteamManagerDropId = (id: string) => `subteam-manager:${id}`;
-const memberDragId = (personId: string) => `member:${personId}`;
+const unassignedDropId = (slot: SubTeamSlot) => `subteam:unassigned:${slot}`;
+const subteamMembersDropId = (id: string, slot: SubTeamSlot) => `subteam-members:${id}:${slot}`;
+const subteamManagerDropId = (id: string, slot: SubTeamSlot) => `subteam-manager:${id}:${slot}`;
+const memberDragId = (personId: string, slot: SubTeamSlot) => `member:${personId}:${slot}`;
 
-export function SubTeamsCanvas() {
+export function SubTeamsCanvas({
+  slot = 'main',
+  title = 'Professional pods',
+}: {
+  slot?: SubTeamSlot;
+  title?: string;
+}) {
   const people = useStore(selectVisiblePeople);
-  const allPods = useStore((s) => s.subTeams ?? []);
+  const allPods = useStore((s) => (slot === 'second' ? s.subTeams2 : s.subTeams) ?? []);
 
   const crossCut = allPods.filter((p) => p.kind === 'crossCut');
   const normal = allPods.filter((p) => p.kind !== 'crossCut');
@@ -24,28 +31,26 @@ export function SubTeamsCanvas() {
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-12">
-      <h2 className="mb-6 text-2xl font-bold text-ink">Professional pods</h2>
+      <h2 className="mb-6 text-2xl font-bold text-ink">{title}</h2>
 
-      <UnassignedPool people={unassigned} />
+      <UnassignedPool people={unassigned} slot={slot} />
 
-      {/* Normal pods: 4-col grid */}
       {normal.length === 0 && crossCut.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center text-sm italic text-muted">
-          No pods yet. Hit + Pod to create one.
+          No pods yet. Add one from Admin → Quick add.
         </div>
       ) : normal.length > 0 ? (
         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {normal.map((st) => (
-            <PodBox key={st.id} subTeam={st} people={people} />
+            <PodBox key={st.id} subTeam={st} people={people} slot={slot} />
           ))}
         </div>
       ) : null}
 
-      {/* Cross pods: full-width thinner bars BELOW the normal grid */}
       {crossCut.length > 0 && (
         <div className="mt-5 flex flex-col gap-3">
           {crossCut.map((st) => (
-            <CrossCutBar key={st.id} subTeam={st} people={people} />
+            <CrossCutBar key={st.id} subTeam={st} people={people} slot={slot} />
           ))}
         </div>
       )}
@@ -53,8 +58,8 @@ export function SubTeamsCanvas() {
   );
 }
 
-function UnassignedPool({ people }: { people: Person[] }) {
-  const { setNodeRef, isOver } = useDroppable({ id: UNASSIGNED_DROP_ID });
+function UnassignedPool({ people, slot }: { people: Person[]; slot: SubTeamSlot }) {
+  const { setNodeRef, isOver } = useDroppable({ id: unassignedDropId(slot) });
   const isEmpty = people.length === 0;
 
   return (
@@ -73,7 +78,7 @@ function UnassignedPool({ people }: { people: Person[] }) {
       {!isEmpty && (
         <div className="flex flex-wrap gap-2">
           {people.map((p) => (
-            <PhotoChip key={p.id} person={p} />
+            <PhotoChip key={p.id} person={p} slot={slot} />
           ))}
         </div>
       )}
@@ -81,8 +86,7 @@ function UnassignedPool({ people }: { people: Person[] }) {
   );
 }
 
-/** Normal pod — 4-col grid card. */
-function PodBox({ subTeam, people }: { subTeam: SubTeam; people: Person[] }) {
+function PodBox({ subTeam, people, slot }: { subTeam: SubTeam; people: Person[]; slot: SubTeamSlot }) {
   const manager = subTeam.managerId ? people.find((p) => p.id === subTeam.managerId) ?? null : null;
   const members = subTeam.memberIds
     .map((id) => people.find((p) => p.id === id))
@@ -91,20 +95,19 @@ function PodBox({ subTeam, people }: { subTeam: SubTeam; people: Person[] }) {
   return (
     <article className="card-gradient">
       <div className="card-gradient-inner flex min-h-[360px] flex-col gap-4 p-5">
-        <PodHeader subTeam={subTeam} />
-        <ManagerSlot subTeamId={subTeam.id} manager={manager} />
-        <MembersArea subTeamId={subTeam.id} members={members} />
+        <PodHeader subTeam={subTeam} slot={slot} />
+        <ManagerSlot subTeamId={subTeam.id} manager={manager} slot={slot} />
+        <MembersArea subTeamId={subTeam.id} members={members} slot={slot} />
         <div className="mt-auto flex flex-col gap-2 pt-2">
-          <TagRow subTeam={subTeam} />
-          <SharedGoal subTeam={subTeam} />
+          <TagRow subTeam={subTeam} slot={slot} />
+          <SharedGoal subTeam={subTeam} slot={slot} />
         </div>
       </div>
     </article>
   );
 }
 
-/** Cross-cut pod — full-width thinner horizontal bar. */
-function CrossCutBar({ subTeam, people }: { subTeam: SubTeam; people: Person[] }) {
+function CrossCutBar({ subTeam, people, slot }: { subTeam: SubTeam; people: Person[]; slot: SubTeamSlot }) {
   const manager = subTeam.managerId ? people.find((p) => p.id === subTeam.managerId) ?? null : null;
   const members = subTeam.memberIds
     .map((id) => people.find((p) => p.id === id))
@@ -113,34 +116,31 @@ function CrossCutBar({ subTeam, people }: { subTeam: SubTeam; people: Person[] }
   return (
     <article className="card-gradient">
       <div className="card-gradient-inner flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-3">
-        {/* Title (no badge) */}
         <div className="flex min-w-[200px] flex-1 items-center gap-2">
-          <PodHeader subTeam={subTeam} inline />
+          <PodHeader subTeam={subTeam} inline slot={slot} />
         </div>
-
-        {/* Lead slot inline */}
-        <CrossCutSlot label="Lead" subTeamId={subTeam.id} kind="manager" person={manager} />
-
-        {/* Members area inline (no MEMBERS label) */}
-        <CrossCutSlot label="" subTeamId={subTeam.id} kind="members" people={members} />
-
-        {/* Tags inline */}
+        <CrossCutSlot label="Lead" subTeamId={subTeam.id} kind="manager" person={manager} slot={slot} />
+        <CrossCutSlot label="" subTeamId={subTeam.id} kind="members" people={members} slot={slot} />
         <div className="flex items-center gap-2">
-          <TagRow subTeam={subTeam} dense />
+          <TagRow subTeam={subTeam} dense slot={slot} />
         </div>
-
-        {/* Goal inline */}
         <div className="min-w-[180px] flex-1">
-          <SharedGoal subTeam={subTeam} dense />
+          <SharedGoal subTeam={subTeam} dense slot={slot} />
         </div>
       </div>
     </article>
   );
 }
 
-// ---------------------------------------------------------------------------
-
-function PodHeader({ subTeam, inline = false }: { subTeam: SubTeam; inline?: boolean }) {
+function PodHeader({
+  subTeam,
+  inline = false,
+  slot,
+}: {
+  subTeam: SubTeam;
+  inline?: boolean;
+  slot: SubTeamSlot;
+}) {
   const updateSubTeamTitle = useStore((s) => s.updateSubTeamTitle);
   const removeSubTeam = useStore((s) => s.removeSubTeam);
   const [editing, setEditing] = useState(false);
@@ -158,7 +158,7 @@ function PodHeader({ subTeam, inline = false }: { subTeam: SubTeam; inline?: boo
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => {
-              if (draft.trim()) updateSubTeamTitle(subTeam.id, draft.trim());
+              if (draft.trim()) updateSubTeamTitle(subTeam.id, draft.trim(), slot);
               else setDraft(subTeam.title);
               setEditing(false);
             }}
@@ -181,36 +181,34 @@ function PodHeader({ subTeam, inline = false }: { subTeam: SubTeam; inline?: boo
           </h3>
         )}
       </div>
-      {!inline && (
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm(`Remove pod "${subTeam.title}"?`)) removeSubTeam(subTeam.id);
-          }}
-          className="rounded-full px-2 py-0.5 text-sm text-muted hover:bg-rose-500/15 hover:text-rose-300"
-          title="Remove pod"
-        >
-          ×
-        </button>
-      )}
-      {inline && (
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm(`Remove pod "${subTeam.title}"?`)) removeSubTeam(subTeam.id);
-          }}
-          className="rounded-full px-1.5 text-xs text-muted hover:text-rose-300"
-          title="Remove pod"
-        >
-          ×
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => {
+          if (confirm(`Remove pod "${subTeam.title}"?`)) removeSubTeam(subTeam.id, slot);
+        }}
+        className={
+          inline
+            ? 'rounded-full px-1.5 text-xs text-muted hover:text-rose-300'
+            : 'rounded-full px-2 py-0.5 text-sm text-muted hover:bg-rose-500/15 hover:text-rose-300'
+        }
+        title="Remove pod"
+      >
+        ×
+      </button>
     </div>
   );
 }
 
-function ManagerSlot({ subTeamId, manager }: { subTeamId: string; manager: Person | null }) {
-  const { setNodeRef, isOver } = useDroppable({ id: subteamManagerDropId(subTeamId) });
+function ManagerSlot({
+  subTeamId,
+  manager,
+  slot,
+}: {
+  subTeamId: string;
+  manager: Person | null;
+  slot: SubTeamSlot;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: subteamManagerDropId(subTeamId, slot) });
   return (
     <div>
       <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Lead</p>
@@ -222,7 +220,7 @@ function ManagerSlot({ subTeamId, manager }: { subTeamId: string; manager: Perso
         ].join(' ')}
       >
         {manager ? (
-          <PhotoChip person={manager} size="lg" />
+          <PhotoChip person={manager} size="lg" slot={slot} />
         ) : (
           <p className="text-xs italic text-muted">Drop one person here as Lead</p>
         )}
@@ -231,8 +229,16 @@ function ManagerSlot({ subTeamId, manager }: { subTeamId: string; manager: Perso
   );
 }
 
-function MembersArea({ subTeamId, members }: { subTeamId: string; members: Person[] }) {
-  const { setNodeRef, isOver } = useDroppable({ id: subteamMembersDropId(subTeamId) });
+function MembersArea({
+  subTeamId,
+  members,
+  slot,
+}: {
+  subTeamId: string;
+  members: Person[];
+  slot: SubTeamSlot;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: subteamMembersDropId(subTeamId, slot) });
   return (
     <div
       ref={setNodeRef}
@@ -244,20 +250,21 @@ function MembersArea({ subTeamId, members }: { subTeamId: string; members: Perso
       {members.length === 0 ? (
         <p className="text-xs italic text-muted">Drop team photos here</p>
       ) : (
-        members.map((p) => <PhotoChip key={p.id} person={p} />)
+        members.map((p) => <PhotoChip key={p.id} person={p} slot={slot} />)
       )}
     </div>
   );
 }
 
-/** Compact slot used in the cross-cut horizontal layout. */
 function CrossCutSlot(
   props:
-    | { label: string; subTeamId: string; kind: 'manager'; person: Person | null }
-    | { label: string; subTeamId: string; kind: 'members'; people: Person[] },
+    | { label: string; subTeamId: string; kind: 'manager'; person: Person | null; slot: SubTeamSlot }
+    | { label: string; subTeamId: string; kind: 'members'; people: Person[]; slot: SubTeamSlot },
 ) {
   const dropId =
-    props.kind === 'manager' ? subteamManagerDropId(props.subTeamId) : subteamMembersDropId(props.subTeamId);
+    props.kind === 'manager'
+      ? subteamManagerDropId(props.subTeamId, props.slot)
+      : subteamMembersDropId(props.subTeamId, props.slot);
   const { setNodeRef, isOver } = useDroppable({ id: dropId });
   const membersEmpty = props.kind === 'members' && props.people.length === 0;
 
@@ -270,28 +277,25 @@ function CrossCutSlot(
         ref={setNodeRef}
         className={[
           'flex items-center gap-1.5 rounded-xl border border-dashed px-2 py-1',
-          // Empty members slot: collapse to a tiny dotted hint that still accepts drops
           membersEmpty ? 'min-h-[28px] min-w-[24px] border-white/5' : 'min-h-[36px]',
           isOver ? 'border-accent/60 bg-accent/10' : !membersEmpty ? 'border-white/10' : '',
         ].join(' ')}
       >
         {props.kind === 'manager' ? (
           props.person ? (
-            <PhotoChip person={props.person} />
+            <PhotoChip person={props.person} slot={props.slot} />
           ) : (
             <span className="text-[10px] italic text-muted px-1">Drop lead</span>
           )
         ) : (
-          props.people.map((p) => <PhotoChip key={p.id} person={p} />)
+          props.people.map((p) => <PhotoChip key={p.id} person={p} slot={props.slot} />)
         )}
       </div>
     </div>
   );
 }
 
-// ---------------------------------------------------------------------------
-
-function TagRow({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean }) {
+function TagRow({ subTeam, dense = false, slot }: { subTeam: SubTeam; dense?: boolean; slot: SubTeamSlot }) {
   const addSubTeamTag = useStore((s) => s.addSubTeamTag);
   const removeSubTeamTag = useStore((s) => s.removeSubTeamTag);
   const [adding, setAdding] = useState(false);
@@ -300,7 +304,7 @@ function TagRow({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean 
 
   const commit = () => {
     const v = draft.trim();
-    if (v) addSubTeamTag(subTeam.id, v);
+    if (v) addSubTeamTag(subTeam.id, v, slot);
     setDraft('');
     setAdding(false);
   };
@@ -319,7 +323,7 @@ function TagRow({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean 
           {t}
           <button
             type="button"
-            onClick={() => removeSubTeamTag(subTeam.id, i)}
+            onClick={() => removeSubTeamTag(subTeam.id, i, slot)}
             className="opacity-0 transition-opacity group-hover:opacity-80 hover:opacity-100"
             title="Remove tag"
           >
@@ -348,7 +352,7 @@ function TagRow({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean 
           type="button"
           onClick={() => setAdding(true)}
           className="rounded-full border border-dashed border-accent/40 px-1.5 py-px text-[8px] text-muted hover:border-accent hover:text-ink"
-          title="Add tag (deliverable / focus / output)"
+          title="Add tag"
         >
           + tag
         </button>
@@ -357,7 +361,15 @@ function TagRow({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean 
   );
 }
 
-function SharedGoal({ subTeam, dense = false }: { subTeam: SubTeam; dense?: boolean }) {
+function SharedGoal({
+  subTeam,
+  dense = false,
+  slot,
+}: {
+  subTeam: SubTeam;
+  dense?: boolean;
+  slot: SubTeamSlot;
+}) {
   const setSubTeamGoalText = useStore((s) => s.setSubTeamGoalText);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(subTeam.goalText ?? '');
@@ -365,16 +377,14 @@ function SharedGoal({ subTeam, dense = false }: { subTeam: SubTeam; dense?: bool
 
   return (
     <div className={['flex items-baseline gap-2', dense ? '' : ''].join(' ')}>
-      <span className="shrink-0 text-[7px] font-semibold uppercase tracking-wide text-muted">
-        Shared goal
-      </span>
+      <span className="shrink-0 text-[7px] font-semibold uppercase tracking-wide text-muted">Shared goal</span>
       {editing ? (
         <input
           autoFocus
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => {
-            setSubTeamGoalText(subTeam.id, draft.trim());
+            setSubTeamGoalText(subTeam.id, draft.trim(), slot);
             setEditing(false);
           }}
           onKeyDown={(e) => {
@@ -400,12 +410,10 @@ function SharedGoal({ subTeam, dense = false }: { subTeam: SubTeam; dense?: bool
   );
 }
 
-// ---------------------------------------------------------------------------
-
-function PhotoChip({ person, size = 'md' }: { person: Person; size?: 'md' | 'lg' }) {
+function PhotoChip({ person, size = 'md', slot }: { person: Person; size?: 'md' | 'lg'; slot: SubTeamSlot }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: memberDragId(person.id),
-    data: { personId: person.id, kind: 'subteam-member' },
+    id: memberDragId(person.id, slot),
+    data: { personId: person.id, kind: 'subteam-member', slot },
   });
   const photo = resolvePhotoUrl(person.photoUrl);
   const [imgFailed, setImgFailed] = useState(false);
@@ -458,5 +466,44 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-// Expose drop IDs for App.tsx to decode
-export { UNASSIGNED_DROP_ID, subteamMembersDropId, subteamManagerDropId, memberDragId };
+// Drop ID parsers for App.tsx routing
+export function parseSubTeamDropId(
+  overId: string,
+):
+  | { kind: 'unassigned'; slot: SubTeamSlot }
+  | { kind: 'manager'; subTeamId: string; slot: SubTeamSlot }
+  | { kind: 'members'; subTeamId: string; slot: SubTeamSlot }
+  | null {
+  if (overId.startsWith('subteam:unassigned:')) {
+    return { kind: 'unassigned', slot: overId.endsWith(':second') ? 'second' : 'main' };
+  }
+  if (overId.startsWith('subteam-manager:')) {
+    const rest = overId.slice('subteam-manager:'.length);
+    const lastColon = rest.lastIndexOf(':');
+    return {
+      kind: 'manager',
+      subTeamId: rest.slice(0, lastColon),
+      slot: rest.endsWith(':second') ? 'second' : 'main',
+    };
+  }
+  if (overId.startsWith('subteam-members:')) {
+    const rest = overId.slice('subteam-members:'.length);
+    const lastColon = rest.lastIndexOf(':');
+    return {
+      kind: 'members',
+      subTeamId: rest.slice(0, lastColon),
+      slot: rest.endsWith(':second') ? 'second' : 'main',
+    };
+  }
+  return null;
+}
+
+export function parseMemberDragId(activeId: string): { personId: string; slot: SubTeamSlot } | null {
+  if (!activeId.startsWith('member:')) return null;
+  const rest = activeId.slice('member:'.length);
+  const lastColon = rest.lastIndexOf(':');
+  return {
+    personId: rest.slice(0, lastColon),
+    slot: rest.endsWith(':second') ? 'second' : 'main',
+  };
+}
