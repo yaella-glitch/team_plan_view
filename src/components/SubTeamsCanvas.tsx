@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useStore, selectVisiblePeople } from '../store';
 import type { SubTeamSlot } from '../store';
 import { resolvePhotoUrl } from '../lib/photo';
+import { useAdminUnlocked } from '../lib/admin';
 import type { Person, SubTeam } from '../types';
 
 const unassignedDropId = (slot: SubTeamSlot) => `subteam:unassigned:${slot}`;
@@ -20,6 +21,8 @@ export function SubTeamsCanvas({
 }) {
   const people = useStore(selectVisiblePeople);
   const allPods = useStore((s) => (slot === 'second' ? s.subTeams2 : s.subTeams) ?? []);
+  const addSubTeam = useStore((s) => s.addSubTeam);
+  const admin = useAdminUnlocked();
 
   const crossCut = allPods.filter((p) => p.kind === 'crossCut');
   const normal = allPods.filter((p) => p.kind !== 'crossCut');
@@ -31,13 +34,35 @@ export function SubTeamsCanvas({
 
   return (
     <section className="mx-auto max-w-7xl px-8 py-12">
-      <h2 className="mb-6 text-2xl font-bold text-ink">{title}</h2>
+      <div className="mb-6 flex items-center gap-3">
+        <h2 className="text-2xl font-bold text-ink">{title}</h2>
+        {admin && (
+          <>
+            <button
+              type="button"
+              onClick={() => addSubTeam('New pod', 'normal', slot)}
+              className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
+              title="Add a pod"
+            >
+              + Pod
+            </button>
+            <button
+              type="button"
+              onClick={() => addSubTeam('New cross pod', 'crossCut', slot)}
+              className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
+              title="Add a cross pod"
+            >
+              + Cross
+            </button>
+          </>
+        )}
+      </div>
 
       <UnassignedPool people={unassigned} slot={slot} />
 
       {normal.length === 0 && crossCut.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center text-sm italic text-muted">
-          No pods yet. Add one from Admin → Quick add.
+          {admin ? 'No pods yet. Hit + Pod above to start.' : 'No pods yet.'}
         </div>
       ) : normal.length > 0 ? (
         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
