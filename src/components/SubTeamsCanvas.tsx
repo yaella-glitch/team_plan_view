@@ -292,7 +292,9 @@ function TeamArea({
 function SeeMoreButton({ subTeam, onClick }: { subTeam: SubTeam; onClick: () => void }) {
   const admin = useAdminUnlocked();
   const ownerships = subTeam.ownerships ?? {};
-  const itemCount = Object.values(ownerships).reduce((n, list) => n + list.length, 0);
+  const ownershipCount = Object.values(ownerships).reduce((n, list) => n + list.length, 0);
+  const podCount = (subTeam.podResponsibilities ?? []).length;
+  const itemCount = ownershipCount + podCount;
   const hasNotes = Boolean((subTeam.detailsText ?? '').trim());
   // Hide for non-admins when there's nothing to see (no items + no notes).
   if (!admin && itemCount === 0 && !hasNotes) return null;
@@ -326,6 +328,9 @@ function PodDetailModal({
   const addOwnershipItem = useStore((s) => s.addOwnershipItem);
   const updateOwnershipItem = useStore((s) => s.updateOwnershipItem);
   const removeOwnershipItem = useStore((s) => s.removeOwnershipItem);
+  const addPodResponsibility = useStore((s) => s.addPodResponsibility);
+  const updatePodResponsibility = useStore((s) => s.updatePodResponsibility);
+  const removePodResponsibility = useStore((s) => s.removePodResponsibility);
   const setSubTeamDetails = useStore((s) => s.setSubTeamDetails);
 
   // Close on Escape
@@ -338,6 +343,7 @@ function PodDetailModal({
   }, [onClose]);
 
   const ownerships = subTeam.ownerships ?? {};
+  const podResponsibilities = subTeam.podResponsibilities ?? [];
 
   return (
     <div
@@ -345,7 +351,7 @@ function PodDetailModal({
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-canvas shadow-2xl"
+        className="relative flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-canvas shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -369,26 +375,33 @@ function PodDetailModal({
           </button>
         </div>
 
-        {/* Body — scrolls */}
+        {/* Body — two columns, scrolls */}
         <div className="flex-1 overflow-y-auto px-6 py-5">
-          {people.length === 0 ? (
-            <p className="text-sm italic text-muted">No team members in this pod yet.</p>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {people.map((p) => (
-                <OwnershipRow
-                  key={p.id}
-                  person={p}
-                  isLead={p.id === leadId}
-                  items={ownerships[p.id] ?? []}
-                  admin={admin}
-                  onAdd={(v) => addOwnershipItem(subTeam.id, p.id, v, slot)}
-                  onUpdate={(idx, v) => updateOwnershipItem(subTeam.id, p.id, idx, v, slot)}
-                  onRemove={(idx) => removeOwnershipItem(subTeam.id, p.id, idx, slot)}
-                />
-              ))}
-            </div>
-          )}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            {/* Left: What the pod owns */}
+            <PodResponsibilitiesColumn
+              items={podResponsibilities}
+              admin={admin}
+              onAdd={(v) => addPodResponsibility(subTeam.id, v, slot)}
+              onUpdate={(idx, v) => updatePodResponsibility(subTeam.id, idx, v, slot)}
+              onRemove={(idx) => removePodResponsibility(subTeam.id, idx, slot)}
+            />
+
+            {/* Right: Who owns what */}
+            <WhoOwnsWhatColumn
+              people={people}
+              leadId={leadId}
+              ownerships={ownerships}
+              admin={admin}
+              onAdd={(personId, v) => addOwnershipItem(subTeam.id, personId, v, slot)}
+              onUpdate={(personId, idx, v) =>
+                updateOwnershipItem(subTeam.id, personId, idx, v, slot)
+              }
+              onRemove={(personId, idx) =>
+                removeOwnershipItem(subTeam.id, personId, idx, slot)
+              }
+            />
+          </div>
 
           {/* Free-text notes (optional) */}
           <NotesBlock
@@ -399,6 +412,127 @@ function PodDetailModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function PodResponsibilitiesColumn({
+  items,
+  admin,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: {
+  items: string[];
+  admin: boolean;
+  onAdd: (v: string) => void;
+  onUpdate: (index: number, v: string) => void;
+  onRemove: (index: number) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const commit = () => {
+    const v = draft.trim();
+    if (v) onAdd(v);
+    setDraft('');
+    setAdding(false);
+  };
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h4 className="text-[11px] font-bold uppercase tracking-wide text-muted">
+        What the pod owns
+      </h4>
+      {items.length === 0 && !adding ? (
+        <p className="text-sm italic text-muted">
+          {admin ? 'Add what the team owns as a whole.' : 'Nothing here yet.'}
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {items.map((it, idx) => (
+            <OwnershipBullet
+              key={idx}
+              text={it}
+              admin={admin}
+              onUpdate={(v) => onUpdate(idx, v)}
+              onRemove={() => onRemove(idx)}
+            />
+          ))}
+        </ul>
+      )}
+      {admin && (
+        <div>
+          {adding ? (
+            <input
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                else if (e.key === 'Escape') {
+                  setDraft('');
+                  setAdding(false);
+                }
+              }}
+              placeholder="what the pod owns…"
+              className="w-full rounded-md border border-accent/40 bg-white/[0.04] px-2 py-1 text-sm text-ink outline-none"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="text-xs text-muted hover:text-ink"
+            >
+              + add item
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function WhoOwnsWhatColumn({
+  people,
+  leadId,
+  ownerships,
+  admin,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: {
+  people: Person[];
+  leadId: string | null;
+  ownerships: Record<string, string[]>;
+  admin: boolean;
+  onAdd: (personId: string, v: string) => void;
+  onUpdate: (personId: string, index: number, v: string) => void;
+  onRemove: (personId: string, index: number) => void;
+}) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h4 className="text-[11px] font-bold uppercase tracking-wide text-muted">
+        Who owns what
+      </h4>
+      {people.length === 0 ? (
+        <p className="text-sm italic text-muted">No team members in this pod yet.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {people.map((p) => (
+            <OwnershipRow
+              key={p.id}
+              person={p}
+              isLead={p.id === leadId}
+              items={ownerships[p.id] ?? []}
+              admin={admin}
+              onAdd={(v) => onAdd(p.id, v)}
+              onUpdate={(idx, v) => onUpdate(p.id, idx, v)}
+              onRemove={(idx) => onRemove(p.id, idx)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

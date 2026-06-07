@@ -74,6 +74,8 @@ export type SubTeam = {
   /** Per-person ownership bullets, scoped to THIS pod (same person can hold
    *  different things in different pods). Keyed by personId. */
   ownerships?: Record<string, string[]>;
+  /** Flat list of pod-level responsibilities — what the team as a whole owns. */
+  podResponsibilities?: string[];
 };
 
 export type Topic = {

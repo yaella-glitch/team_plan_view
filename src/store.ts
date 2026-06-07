@@ -62,6 +62,15 @@ type Actions = {
     index: number,
     slot?: SubTeamSlot,
   ) => void;
+  // Pod-level responsibilities (flat list of what the whole pod owns)
+  addPodResponsibility: (subTeamId: string, item: string, slot?: SubTeamSlot) => void;
+  updatePodResponsibility: (
+    subTeamId: string,
+    index: number,
+    item: string,
+    slot?: SubTeamSlot,
+  ) => void;
+  removePodResponsibility: (subTeamId: string, index: number, slot?: SubTeamSlot) => void;
   addSubTeamTag: (id: string, tag: string, slot?: SubTeamSlot) => void;
   removeSubTeamTag: (id: string, tagIndex: number, slot?: SubTeamSlot) => void;
 
@@ -445,6 +454,47 @@ export const useStore = create<Store>()(
             if (index < 0 || index >= list.length) return s;
             list.splice(index, 1);
             return { ...s, ownerships: { ...current, [personId]: list } };
+          }),
+        }));
+      },
+      addPodResponsibility: (subTeamId, item, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        const v = item.trim();
+        if (!v) return;
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) =>
+            s.id === subTeamId
+              ? { ...s, podResponsibilities: [...(s.podResponsibilities ?? []), v] }
+              : s,
+          ),
+        }));
+      },
+      updatePodResponsibility: (subTeamId, index, item, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        const v = item.trim();
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const list = [...(s.podResponsibilities ?? [])];
+            if (index < 0 || index >= list.length) return s;
+            if (!v) {
+              list.splice(index, 1);
+            } else {
+              list[index] = v;
+            }
+            return { ...s, podResponsibilities: list };
+          }),
+        }));
+      },
+      removePodResponsibility: (subTeamId, index, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const list = [...(s.podResponsibilities ?? [])];
+            if (index < 0 || index >= list.length) return s;
+            list.splice(index, 1);
+            return { ...s, podResponsibilities: list };
           }),
         }));
       },
