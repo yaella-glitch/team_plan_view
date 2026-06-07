@@ -19,7 +19,7 @@ export function About() {
   const image = about[active] ?? null;
 
   return (
-    <section className="mx-auto max-w-7xl px-8 py-10">
+    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-10">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-ink">About the AI work platform PMMs</h2>
       </div>

@@ -34,10 +34,10 @@ export function OwnershipOverview() {
     .sort((a, b) => a.order - b.order);
 
   return (
-    <section className="mx-auto max-w-7xl px-8 py-8">
+    <section className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-8">
       <h2 className="mb-4 text-2xl font-bold text-ink">Ownership by topic</h2>
 
-      <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-5 shadow-sm">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-3 shadow-sm sm:p-5">
         {/* Tabs row */}
         <div className="mb-5 flex flex-wrap gap-2">
           {TOPIC_TAB_CATEGORIES.map((catId) => {
@@ -72,7 +72,7 @@ export function OwnershipOverview() {
         </div>
 
         {/* Topic cards for the active tab — all share the category color */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {tabTopics.map((t) => (
             <TopicCard key={t.id} topic={t} color={CATEGORY_BY_ID[safeActive].ownershipColor} />
           ))}
@@ -253,7 +253,7 @@ function TopicCard({ topic, color }: { topic: Topic; color: string }) {
           extend below freely. Anchored to the right edge of the card. */}
       {showPicker && (
         <div
-          className="absolute right-0 top-full z-50 mt-1 max-h-[240px] w-52 overflow-y-auto rounded-lg border border-white/10 bg-surface p-1.5 shadow-xl"
+          className="absolute right-0 top-full z-50 mt-1 max-h-[240px] w-[min(13rem,calc(100vw-2rem))] overflow-y-auto rounded-lg border border-white/10 bg-surface p-1.5 shadow-xl"
           style={{ background: 'rgb(var(--surface))' }}
         >
           {available.length === 0 ? (

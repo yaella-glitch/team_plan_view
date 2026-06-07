@@ -33,7 +33,7 @@ export function Hero() {
         }}
       />
 
-      <div className="mx-auto flex max-w-7xl items-center gap-8 px-8 pt-16 pb-20 lg:gap-12">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 pt-12 pb-16 sm:gap-8 sm:px-8 sm:pt-16 sm:pb-20 lg:gap-12">
         {/* Left: logo + headlines */}
         <div className="flex-1">
           <MondayLogo />

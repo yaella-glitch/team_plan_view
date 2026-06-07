@@ -7,7 +7,7 @@ export function LatestGallery() {
   const items = useStore((s) => s.latest ?? []);
 
   return (
-    <section className="mx-auto max-w-7xl px-8 py-10">
+    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-10">
       <h2 className="mb-5 text-2xl font-bold text-ink">Our latest highlights</h2>
 
       {items.length === 0 ? (

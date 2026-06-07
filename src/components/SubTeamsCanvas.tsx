@@ -32,7 +32,7 @@ export function SubTeamsCanvas({
   const unassigned = people.filter((p) => !assignedIds.has(p.id));
 
   return (
-    <section className="mx-auto max-w-7xl px-8 py-12">
+    <section className="mx-auto max-w-7xl px-4 py-10 sm:px-8 sm:py-12">
       <div className="mb-6 flex items-center gap-3">
         <h2 className="text-2xl font-bold text-ink">{title}</h2>
         {admin && (
@@ -154,11 +154,11 @@ function CrossCutBar({ subTeam, people, slot }: { subTeam: SubTeam; people: Pers
 
   return (
     <article className="card-gradient">
-      <div className="card-gradient-inner flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-3">
-        <div className="flex min-w-[200px] flex-1 items-center gap-2">
+      <div className="card-gradient-inner flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3 sm:px-5">
+        <div className="flex w-full flex-1 items-center gap-2 sm:w-auto sm:min-w-[200px]">
           <PodHeader subTeam={subTeam} inline slot={slot} />
         </div>
-        <div className="min-w-[180px] flex-1">
+        <div className="w-full flex-1 sm:w-auto sm:min-w-[180px]">
           <SharedGoal subTeam={subTeam} dense slot={slot} />
         </div>
         <TeamArea subTeamId={subTeam.id} people={ordered} leadId={subTeam.managerId} slot={slot} dense />
@@ -347,15 +347,15 @@ function PodDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-2 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-canvas shadow-2xl"
+        className="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-canvas shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 border-b border-white/10 px-6 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4">
           <div>
             <h3 className="text-xl font-bold text-ink">{subTeam.title}</h3>
             {subTeam.goalText && (
@@ -376,7 +376,7 @@ function PodDetailModal({
         </div>
 
         {/* Body — two columns, scrolls */}
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Left: What the pod owns */}
             <PodResponsibilitiesColumn
@@ -567,9 +567,9 @@ function OwnershipRow({
   };
 
   return (
-    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3 sm:grid sm:grid-cols-[auto_1fr] sm:gap-x-4 sm:gap-y-1 sm:p-4">
       {/* Left column: photo + name + lead */}
-      <div className="flex w-40 shrink-0 flex-col items-start gap-2">
+      <div className="flex shrink-0 items-center gap-3 sm:w-40 sm:flex-col sm:items-start sm:gap-2">
         <div className="h-14 w-14 overflow-hidden rounded-full ring-1 ring-white/15">
           {photo && !imgFailed ? (
             <img

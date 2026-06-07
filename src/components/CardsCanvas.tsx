@@ -30,22 +30,21 @@ export function CardsCanvas() {
   const selected = people.find((p) => p.id === selectedId) ?? null;
 
   return (
-    <section className="mx-auto max-w-7xl px-8 py-12">
+    <section className="mx-auto max-w-7xl px-4 py-10 sm:px-8 sm:py-12">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-ink">Full card: ownership by PMM</h2>
       </div>
 
-      <div className="flex items-stretch gap-5">
-        {/* Left strip: stretches to match card height. The inner content lives
-            in an absolutely-positioned div so its natural (taller) height
-            doesn't push the flex row taller than the card. */}
-        <aside className="relative w-[96px] shrink-0">
-          <div className="absolute inset-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 shadow-sm backdrop-blur">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:gap-5">
+        {/* On desktop: vertical strip on the left, stretches to match card height.
+            On mobile: horizontal scrollable strip on top. */}
+        <aside className="relative sm:w-[96px] sm:shrink-0">
+          <div className="overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] p-1.5 shadow-sm backdrop-blur sm:absolute sm:inset-0 sm:overflow-x-hidden sm:overflow-y-auto">
             <SortableContext
               items={people.map((p) => personDragId(p.id))}
               strategy={verticalListSortingStrategy}
             >
-              <ul className="flex flex-col gap-1.5">
+              <ul className="flex flex-row gap-1.5 sm:flex-col">
                 {people.map((p) => (
                   <PhotoTile
                     key={p.id}
@@ -101,7 +100,7 @@ function PhotoTile({
         transition,
         opacity: isDragging ? 0.4 : enabled ? 1 : 0.45,
       }}
-      className="relative"
+      className="relative w-16 shrink-0 sm:w-auto sm:shrink"
     >
       {/* Card body — drag handle + click-to-select. Using a div (not button) so
           the pointer events flow cleanly to dnd-kit's sensor. */}

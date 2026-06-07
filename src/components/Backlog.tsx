@@ -14,7 +14,7 @@ export function Backlog() {
   const [openModal, setOpenModal] = useState(false);
 
   return (
-    <section className="mx-auto max-w-7xl px-8 py-12">
+    <section className="mx-auto max-w-7xl px-4 py-10 sm:px-8 sm:py-12">
       <div className="mb-5 flex items-center gap-3">
         <h2 className="text-2xl font-bold text-ink">Backlog</h2>
         <button
