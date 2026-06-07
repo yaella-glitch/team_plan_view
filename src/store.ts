@@ -47,6 +47,21 @@ type Actions = {
   setSubTeamManager: (subTeamId: string, personId: string | null, slot?: SubTeamSlot) => void;
   setSubTeamGoalText: (id: string, text: string, slot?: SubTeamSlot) => void;
   setSubTeamDetails: (id: string, text: string, slot?: SubTeamSlot) => void;
+  // Per-person ownership bullets inside a pod
+  addOwnershipItem: (subTeamId: string, personId: string, item: string, slot?: SubTeamSlot) => void;
+  updateOwnershipItem: (
+    subTeamId: string,
+    personId: string,
+    index: number,
+    item: string,
+    slot?: SubTeamSlot,
+  ) => void;
+  removeOwnershipItem: (
+    subTeamId: string,
+    personId: string,
+    index: number,
+    slot?: SubTeamSlot,
+  ) => void;
   addSubTeamTag: (id: string, tag: string, slot?: SubTeamSlot) => void;
   removeSubTeamTag: (id: string, tagIndex: number, slot?: SubTeamSlot) => void;
 
@@ -387,6 +402,50 @@ export const useStore = create<Store>()(
         const key = slotKey(slot);
         set((state) => ({
           [key]: (state[key] ?? []).map((s) => (s.id === id ? { ...s, detailsText: text } : s)),
+        }));
+      },
+      addOwnershipItem: (subTeamId, personId, item, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        const v = item.trim();
+        if (!v) return;
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const current = s.ownerships ?? {};
+            const list = current[personId] ?? [];
+            return { ...s, ownerships: { ...current, [personId]: [...list, v] } };
+          }),
+        }));
+      },
+      updateOwnershipItem: (subTeamId, personId, index, item, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        const v = item.trim();
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const current = s.ownerships ?? {};
+            const list = [...(current[personId] ?? [])];
+            if (index < 0 || index >= list.length) return s;
+            if (!v) {
+              list.splice(index, 1);
+            } else {
+              list[index] = v;
+            }
+            return { ...s, ownerships: { ...current, [personId]: list } };
+          }),
+        }));
+      },
+      removeOwnershipItem: (subTeamId, personId, index, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const current = s.ownerships ?? {};
+            const list = [...(current[personId] ?? [])];
+            if (index < 0 || index >= list.length) return s;
+            list.splice(index, 1);
+            return { ...s, ownerships: { ...current, [personId]: list } };
+          }),
         }));
       },
       addSubTeamTag: (id, tag, slot: SubTeamSlot = 'main') => {

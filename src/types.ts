@@ -71,6 +71,9 @@ export type SubTeam = {
   tags?: string[];
   /** Free-text "See more" details, shown inside an expandable panel on the pod. */
   detailsText?: string;
+  /** Per-person ownership bullets, scoped to THIS pod (same person can hold
+   *  different things in different pods). Keyed by personId. */
+  ownerships?: Record<string, string[]>;
 };
 
 export type Topic = {

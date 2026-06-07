@@ -118,17 +118,28 @@ function PodBox({ subTeam, people, slot }: { subTeam: SubTeam; people: Person[];
   // Render the lead first, inline among the same row as the rest of the team.
   const ordered: Person[] = manager ? [manager, ...members] : members;
 
+  const [detailOpen, setDetailOpen] = useState(false);
+
   return (
     <article className="card-gradient">
-      <div className="card-gradient-inner flex min-h-[300px] flex-col gap-4 p-5">
+      <div className="card-gradient-inner flex min-h-[300px] flex-col gap-3 p-5">
         <PodHeader subTeam={subTeam} slot={slot} />
+        <SharedGoal subTeam={subTeam} slot={slot} />
         <TeamArea subTeamId={subTeam.id} people={ordered} leadId={subTeam.managerId} slot={slot} />
         <div className="mt-auto flex flex-col gap-2 pt-2">
           <TagRow subTeam={subTeam} slot={slot} />
-          <SharedGoal subTeam={subTeam} slot={slot} />
-          <DetailsPanel subTeam={subTeam} slot={slot} />
+          <SeeMoreButton subTeam={subTeam} onClick={() => setDetailOpen(true)} />
         </div>
       </div>
+      {detailOpen && (
+        <PodDetailModal
+          subTeam={subTeam}
+          people={ordered}
+          leadId={subTeam.managerId}
+          slot={slot}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
     </article>
   );
 }
@@ -139,6 +150,7 @@ function CrossCutBar({ subTeam, people, slot }: { subTeam: SubTeam; people: Pers
     .map((id) => people.find((p) => p.id === id))
     .filter((p): p is Person => Boolean(p));
   const ordered: Person[] = manager ? [manager, ...members] : members;
+  const [detailOpen, setDetailOpen] = useState(false);
 
   return (
     <article className="card-gradient">
@@ -146,17 +158,24 @@ function CrossCutBar({ subTeam, people, slot }: { subTeam: SubTeam; people: Pers
         <div className="flex min-w-[200px] flex-1 items-center gap-2">
           <PodHeader subTeam={subTeam} inline slot={slot} />
         </div>
+        <div className="min-w-[180px] flex-1">
+          <SharedGoal subTeam={subTeam} dense slot={slot} />
+        </div>
         <TeamArea subTeamId={subTeam.id} people={ordered} leadId={subTeam.managerId} slot={slot} dense />
         <div className="flex items-center gap-2">
           <TagRow subTeam={subTeam} dense slot={slot} />
         </div>
-        <div className="min-w-[180px] flex-1">
-          <SharedGoal subTeam={subTeam} dense slot={slot} />
-        </div>
-        <div className="w-full">
-          <DetailsPanel subTeam={subTeam} slot={slot} dense />
-        </div>
+        <SeeMoreButton subTeam={subTeam} onClick={() => setDetailOpen(true)} />
       </div>
+      {detailOpen && (
+        <PodDetailModal
+          subTeam={subTeam}
+          people={ordered}
+          leadId={subTeam.managerId}
+          slot={slot}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
     </article>
   );
 }
@@ -270,78 +289,341 @@ function TeamArea({
   );
 }
 
-function DetailsPanel({
+function SeeMoreButton({ subTeam, onClick }: { subTeam: SubTeam; onClick: () => void }) {
+  const admin = useAdminUnlocked();
+  const ownerships = subTeam.ownerships ?? {};
+  const itemCount = Object.values(ownerships).reduce((n, list) => n + list.length, 0);
+  const hasNotes = Boolean((subTeam.detailsText ?? '').trim());
+  // Hide for non-admins when there's nothing to see (no items + no notes).
+  if (!admin && itemCount === 0 && !hasNotes) return null;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 self-start text-[11px] font-medium text-accent hover:underline"
+    >
+      <span>▸</span>
+      <span>See more</span>
+      {itemCount > 0 && <span className="text-muted">· {itemCount}</span>}
+    </button>
+  );
+}
+
+function PodDetailModal({
   subTeam,
+  people,
+  leadId,
   slot,
-  dense = false,
+  onClose,
 }: {
   subTeam: SubTeam;
+  people: Person[];
+  leadId: string | null;
   slot: SubTeamSlot;
-  dense?: boolean;
+  onClose: () => void;
 }) {
   const admin = useAdminUnlocked();
+  const addOwnershipItem = useStore((s) => s.addOwnershipItem);
+  const updateOwnershipItem = useStore((s) => s.updateOwnershipItem);
+  const removeOwnershipItem = useStore((s) => s.removeOwnershipItem);
   const setSubTeamDetails = useStore((s) => s.setSubTeamDetails);
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(subTeam.detailsText ?? '');
-  useEffect(() => setDraft(subTeam.detailsText ?? ''), [subTeam.detailsText]);
 
-  const hasText = Boolean((subTeam.detailsText ?? '').trim());
-  // If viewer-only and no text → don't render the toggle at all.
-  if (!admin && !hasText) return null;
+  // Close on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const ownerships = subTeam.ownerships ?? {};
 
   return (
-    <div className={dense ? '' : 'pt-1'}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-canvas shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
       >
-        <span>{open ? '▾' : '▸'}</span>
-        <span>{open ? 'Hide details' : 'See more'}</span>
-      </button>
-      {open && (
-        <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-          {editing ? (
-            <textarea
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={() => {
-                setSubTeamDetails(subTeam.id, draft, slot);
-                setEditing(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setDraft(subTeam.detailsText ?? '');
-                  setEditing(false);
-                }
-              }}
-              rows={6}
-              placeholder="Describe the team focus, scope, working style, key deliverables…"
-              className="block w-full resize-y bg-transparent text-xs text-ink placeholder:italic placeholder:text-muted outline-none"
-            />
-          ) : hasText ? (
-            <div
-              className={[
-                'whitespace-pre-wrap text-xs leading-relaxed text-ink/90',
-                admin ? 'cursor-text' : '',
-              ].join(' ')}
-              onDoubleClick={() => admin && setEditing(true)}
-              title={admin ? 'Double-click to edit' : undefined}
-            >
-              {subTeam.detailsText}
-            </div>
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 border-b border-white/10 px-6 py-4">
+          <div>
+            <h3 className="text-xl font-bold text-ink">{subTeam.title}</h3>
+            {subTeam.goalText && (
+              <p className="mt-1 text-sm text-muted">
+                <span className="font-semibold text-muted/80">Shared goal · </span>
+                {subTeam.goalText}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-muted hover:bg-white/5 hover:text-ink"
+            title="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Body — scrolls */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {people.length === 0 ? (
+            <p className="text-sm italic text-muted">No team members in this pod yet.</p>
           ) : (
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              className="text-xs italic text-muted hover:text-ink"
-            >
-              + add free-text details
-            </button>
+            <div className="flex flex-col gap-4">
+              {people.map((p) => (
+                <OwnershipRow
+                  key={p.id}
+                  person={p}
+                  isLead={p.id === leadId}
+                  items={ownerships[p.id] ?? []}
+                  admin={admin}
+                  onAdd={(v) => addOwnershipItem(subTeam.id, p.id, v, slot)}
+                  onUpdate={(idx, v) => updateOwnershipItem(subTeam.id, p.id, idx, v, slot)}
+                  onRemove={(idx) => removeOwnershipItem(subTeam.id, p.id, idx, slot)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Free-text notes (optional) */}
+          <NotesBlock
+            text={subTeam.detailsText ?? ''}
+            admin={admin}
+            onSave={(text) => setSubTeamDetails(subTeam.id, text, slot)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OwnershipRow({
+  person,
+  isLead,
+  items,
+  admin,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: {
+  person: Person;
+  isLead: boolean;
+  items: string[];
+  admin: boolean;
+  onAdd: (v: string) => void;
+  onUpdate: (index: number, v: string) => void;
+  onRemove: (index: number) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const photo = resolvePhotoUrl(person.photoUrl);
+  const [imgFailed, setImgFailed] = useState(false);
+  useEffect(() => setImgFailed(false), [person.photoUrl]);
+
+  const commit = () => {
+    const v = draft.trim();
+    if (v) onAdd(v);
+    setDraft('');
+    setAdding(false);
+  };
+
+  return (
+    <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      {/* Left column: photo + name + lead */}
+      <div className="flex w-40 shrink-0 flex-col items-start gap-2">
+        <div className="h-14 w-14 overflow-hidden rounded-full ring-1 ring-white/15">
+          {photo && !imgFailed ? (
+            <img
+              src={photo}
+              alt={person.name}
+              className="h-full w-full object-cover"
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-white/10 text-xs font-semibold text-muted">
+              {initials(person.name)}
+            </div>
           )}
         </div>
+        <div>
+          <div className="text-sm font-semibold text-ink">{person.name}</div>
+          {isLead && (
+            <span className="mt-0.5 inline-block rounded-full bg-white/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-ink">
+              Lead
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Right column: bullets */}
+      <div className="min-w-0">
+        {items.length === 0 && !adding ? (
+          <p className="text-xs italic text-muted">
+            {admin ? 'No items yet — add what they own in this pod.' : 'No items yet.'}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {items.map((it, idx) => (
+              <OwnershipBullet
+                key={idx}
+                text={it}
+                admin={admin}
+                onUpdate={(v) => onUpdate(idx, v)}
+                onRemove={() => onRemove(idx)}
+              />
+            ))}
+          </ul>
+        )}
+        {admin && (
+          <div className="mt-2">
+            {adding ? (
+              <input
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={commit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                  else if (e.key === 'Escape') {
+                    setDraft('');
+                    setAdding(false);
+                  }
+                }}
+                placeholder="what they own…"
+                className="w-full rounded-md border border-accent/40 bg-white/[0.04] px-2 py-1 text-sm text-ink outline-none"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="text-xs text-muted hover:text-ink"
+              >
+                + add item
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function OwnershipBullet({
+  text,
+  admin,
+  onUpdate,
+  onRemove,
+}: {
+  text: string;
+  admin: boolean;
+  onUpdate: (v: string) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(text);
+  useEffect(() => setDraft(text), [text]);
+
+  return (
+    <li className="group flex items-start gap-2 text-sm text-ink/90">
+      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+      {editing ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            onUpdate(draft);
+            setEditing(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+            else if (e.key === 'Escape') {
+              setDraft(text);
+              setEditing(false);
+            }
+          }}
+          className="flex-1 bg-transparent outline-none border-b border-accent/40"
+        />
+      ) : (
+        <span
+          className={['flex-1 leading-snug', admin ? 'cursor-text' : ''].join(' ')}
+          onDoubleClick={() => admin && setEditing(true)}
+          title={admin ? 'Double-click to edit' : undefined}
+        >
+          {text}
+        </span>
+      )}
+      {admin && (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="opacity-0 transition-opacity group-hover:opacity-60 hover:!opacity-100 text-muted hover:text-rose-300"
+          title="Remove"
+        >
+          ×
+        </button>
+      )}
+    </li>
+  );
+}
+
+function NotesBlock({
+  text,
+  admin,
+  onSave,
+}: {
+  text: string;
+  admin: boolean;
+  onSave: (v: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(text);
+  useEffect(() => setDraft(text), [text]);
+  const hasText = Boolean(text.trim());
+  if (!admin && !hasText) return null;
+  return (
+    <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">Notes</p>
+      {editing ? (
+        <textarea
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            onSave(draft);
+            setEditing(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setDraft(text);
+              setEditing(false);
+            }
+          }}
+          rows={4}
+          placeholder="Free-text notes — scope, working style, key deliverables…"
+          className="block w-full resize-y bg-transparent text-sm text-ink placeholder:italic placeholder:text-muted outline-none"
+        />
+      ) : hasText ? (
+        <div
+          className={['whitespace-pre-wrap text-sm leading-relaxed text-ink/90', admin ? 'cursor-text' : ''].join(' ')}
+          onDoubleClick={() => admin && setEditing(true)}
+          title={admin ? 'Double-click to edit' : undefined}
+        >
+          {text}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="text-xs italic text-muted hover:text-ink"
+        >
+          + add notes
+        </button>
       )}
     </div>
   );
@@ -428,8 +710,8 @@ function SharedGoal({
   useEffect(() => setDraft(subTeam.goalText ?? ''), [subTeam.goalText]);
 
   return (
-    <div className={['flex items-baseline gap-2', dense ? '' : ''].join(' ')}>
-      <span className="shrink-0 text-[7px] font-semibold uppercase tracking-wide text-muted">Shared goal</span>
+    <div className="flex items-baseline gap-2">
+      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted">Shared goal</span>
       {editing ? (
         <input
           autoFocus
@@ -447,11 +729,14 @@ function SharedGoal({
             }
           }}
           placeholder="short text…"
-          className="flex-1 bg-transparent text-[7px] text-white outline-none border-b border-accent/40"
+          className="flex-1 bg-transparent text-[10px] text-white outline-none border-b border-accent/40"
         />
       ) : (
         <span
-          className="flex-1 cursor-text truncate text-[7px] text-white"
+          className={[
+            'flex-1 cursor-text text-[10px] text-white',
+            dense ? 'truncate' : '',
+          ].join(' ')}
           onDoubleClick={() => setEditing(true)}
           title="Double-click to edit"
         >
