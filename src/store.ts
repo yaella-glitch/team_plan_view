@@ -46,6 +46,7 @@ type Actions = {
   moveMemberToSubTeam: (personId: string, subTeamId: string | null, slot?: SubTeamSlot) => void;
   setSubTeamManager: (subTeamId: string, personId: string | null, slot?: SubTeamSlot) => void;
   setSubTeamGoalText: (id: string, text: string, slot?: SubTeamSlot) => void;
+  setSubTeamDetails: (id: string, text: string, slot?: SubTeamSlot) => void;
   addSubTeamTag: (id: string, tag: string, slot?: SubTeamSlot) => void;
   removeSubTeamTag: (id: string, tagIndex: number, slot?: SubTeamSlot) => void;
 
@@ -380,6 +381,12 @@ export const useStore = create<Store>()(
         const key = slotKey(slot);
         set((state) => ({
           [key]: (state[key] ?? []).map((s) => (s.id === id ? { ...s, goalText: text } : s)),
+        }));
+      },
+      setSubTeamDetails: (id, text, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => (s.id === id ? { ...s, detailsText: text } : s)),
         }));
       },
       addSubTeamTag: (id, tag, slot: SubTeamSlot = 'main') => {

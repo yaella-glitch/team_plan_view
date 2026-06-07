@@ -74,12 +74,12 @@ export const CATEGORY_BY_ID: Record<Category, CategoryMeta> = Object.fromEntries
 ) as Record<Category, CategoryMeta>;
 
 /** Categories that show up as tabs in the Ownership-by-topic view.
- *  Order: PMM focus, Persona, Channels, Product focal, Business KPI, Agentic flow. */
+ *  Order: PMM focus, Persona, Channels, Product focal.
+ *  Business KPI and Agentic flow are intentionally excluded here — they still
+ *  exist in the data model and on the full PMM card, just not as Ownership tabs. */
 export const TOPIC_TAB_CATEGORIES: Category[] = [
   'pmmFocus',
   'persona',
   'channels',
   'productFocal',
-  'businessKpi',
-  'agenticFlow',
 ];

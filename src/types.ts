@@ -69,6 +69,8 @@ export type SubTeam = {
   goalText?: string;
   /** Small tags for key deliverables / focuses / outputs. */
   tags?: string[];
+  /** Free-text "See more" details, shown inside an expandable panel on the pod. */
+  detailsText?: string;
 };
 
 export type Topic = {

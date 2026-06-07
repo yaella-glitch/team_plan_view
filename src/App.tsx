@@ -165,10 +165,9 @@ export default function App() {
         <Hero />
         <About />
         <LatestGallery />
+        <SubTeamsCanvas slot="main" title="Professional pods" />
         <OwnershipOverview />
         <CardsCanvas />
-        <SubTeamsCanvas slot="main" title="Professional pods" />
-        <SubTeamsCanvas slot="second" title="Professional pods — alternate structure" />
         <Backlog />
         <AdminDrawer />
       </main>

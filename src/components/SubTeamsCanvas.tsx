@@ -9,7 +9,6 @@ import type { Person, SubTeam } from '../types';
 
 const unassignedDropId = (slot: SubTeamSlot) => `subteam:unassigned:${slot}`;
 const subteamMembersDropId = (id: string, slot: SubTeamSlot) => `subteam-members:${id}:${slot}`;
-const subteamManagerDropId = (id: string, slot: SubTeamSlot) => `subteam-manager:${id}:${slot}`;
 const memberDragId = (personId: string, slot: SubTeamSlot) => `member:${personId}:${slot}`;
 
 export function SubTeamsCanvas({
@@ -116,16 +115,18 @@ function PodBox({ subTeam, people, slot }: { subTeam: SubTeam; people: Person[];
   const members = subTeam.memberIds
     .map((id) => people.find((p) => p.id === id))
     .filter((p): p is Person => Boolean(p));
+  // Render the lead first, inline among the same row as the rest of the team.
+  const ordered: Person[] = manager ? [manager, ...members] : members;
 
   return (
     <article className="card-gradient">
-      <div className="card-gradient-inner flex min-h-[360px] flex-col gap-4 p-5">
+      <div className="card-gradient-inner flex min-h-[300px] flex-col gap-4 p-5">
         <PodHeader subTeam={subTeam} slot={slot} />
-        <ManagerSlot subTeamId={subTeam.id} manager={manager} slot={slot} />
-        <MembersArea subTeamId={subTeam.id} members={members} slot={slot} />
+        <TeamArea subTeamId={subTeam.id} people={ordered} leadId={subTeam.managerId} slot={slot} />
         <div className="mt-auto flex flex-col gap-2 pt-2">
           <TagRow subTeam={subTeam} slot={slot} />
           <SharedGoal subTeam={subTeam} slot={slot} />
+          <DetailsPanel subTeam={subTeam} slot={slot} />
         </div>
       </div>
     </article>
@@ -137,6 +138,7 @@ function CrossCutBar({ subTeam, people, slot }: { subTeam: SubTeam; people: Pers
   const members = subTeam.memberIds
     .map((id) => people.find((p) => p.id === id))
     .filter((p): p is Person => Boolean(p));
+  const ordered: Person[] = manager ? [manager, ...members] : members;
 
   return (
     <article className="card-gradient">
@@ -144,13 +146,15 @@ function CrossCutBar({ subTeam, people, slot }: { subTeam: SubTeam; people: Pers
         <div className="flex min-w-[200px] flex-1 items-center gap-2">
           <PodHeader subTeam={subTeam} inline slot={slot} />
         </div>
-        <CrossCutSlot label="Lead" subTeamId={subTeam.id} kind="manager" person={manager} slot={slot} />
-        <CrossCutSlot label="" subTeamId={subTeam.id} kind="members" people={members} slot={slot} />
+        <TeamArea subTeamId={subTeam.id} people={ordered} leadId={subTeam.managerId} slot={slot} dense />
         <div className="flex items-center gap-2">
           <TagRow subTeam={subTeam} dense slot={slot} />
         </div>
         <div className="min-w-[180px] flex-1">
           <SharedGoal subTeam={subTeam} dense slot={slot} />
+        </div>
+        <div className="w-full">
+          <DetailsPanel subTeam={subTeam} slot={slot} dense />
         </div>
       </div>
     </article>
@@ -224,98 +228,121 @@ function PodHeader({
   );
 }
 
-function ManagerSlot({
+function TeamArea({
   subTeamId,
-  manager,
+  people,
+  leadId,
   slot,
+  dense = false,
 }: {
   subTeamId: string;
-  manager: Person | null;
+  people: Person[];
+  leadId: string | null;
   slot: SubTeamSlot;
+  dense?: boolean;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: subteamManagerDropId(subTeamId, slot) });
-  return (
-    <div>
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted">Lead</p>
-      <div
-        ref={setNodeRef}
-        className={[
-          'flex min-h-[64px] items-center gap-2 rounded-2xl border-2 border-dashed px-3 py-2 transition-colors',
-          isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.03]',
-        ].join(' ')}
-      >
-        {manager ? (
-          <PhotoChip person={manager} size="lg" slot={slot} />
-        ) : (
-          <p className="text-xs italic text-muted">Drop one person here as Lead</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function MembersArea({
-  subTeamId,
-  members,
-  slot,
-}: {
-  subTeamId: string;
-  members: Person[];
-  slot: SubTeamSlot;
-}) {
+  // Members drop zone — dragging into it adds the person as a member.
+  // To promote to Lead, hover a chip and click its ★ button.
   const { setNodeRef, isOver } = useDroppable({ id: subteamMembersDropId(subTeamId, slot) });
   return (
     <div
       ref={setNodeRef}
       className={[
-        'flex min-h-[80px] flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed px-3 py-2.5 transition-colors',
+        'flex flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed transition-colors',
+        dense ? 'min-h-[36px] px-2 py-1' : 'min-h-[80px] px-3 py-2.5',
         isOver ? 'border-accent/60 bg-accent/10' : 'border-white/10 bg-white/[0.03]',
       ].join(' ')}
     >
-      {members.length === 0 ? (
+      {people.length === 0 ? (
         <p className="text-xs italic text-muted">Drop team photos here</p>
       ) : (
-        members.map((p) => <PhotoChip key={p.id} person={p} slot={slot} />)
+        people.map((p) => (
+          <PhotoChip
+            key={p.id}
+            person={p}
+            slot={slot}
+            subTeamId={subTeamId}
+            isLead={p.id === leadId}
+          />
+        ))
       )}
     </div>
   );
 }
 
-function CrossCutSlot(
-  props:
-    | { label: string; subTeamId: string; kind: 'manager'; person: Person | null; slot: SubTeamSlot }
-    | { label: string; subTeamId: string; kind: 'members'; people: Person[]; slot: SubTeamSlot },
-) {
-  const dropId =
-    props.kind === 'manager'
-      ? subteamManagerDropId(props.subTeamId, props.slot)
-      : subteamMembersDropId(props.subTeamId, props.slot);
-  const { setNodeRef, isOver } = useDroppable({ id: dropId });
-  const membersEmpty = props.kind === 'members' && props.people.length === 0;
+function DetailsPanel({
+  subTeam,
+  slot,
+  dense = false,
+}: {
+  subTeam: SubTeam;
+  slot: SubTeamSlot;
+  dense?: boolean;
+}) {
+  const admin = useAdminUnlocked();
+  const setSubTeamDetails = useStore((s) => s.setSubTeamDetails);
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(subTeam.detailsText ?? '');
+  useEffect(() => setDraft(subTeam.detailsText ?? ''), [subTeam.detailsText]);
+
+  const hasText = Boolean((subTeam.detailsText ?? '').trim());
+  // If viewer-only and no text → don't render the toggle at all.
+  if (!admin && !hasText) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      {props.label && !membersEmpty && (
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">{props.label}</span>
-      )}
-      <div
-        ref={setNodeRef}
-        className={[
-          'flex items-center gap-1.5 rounded-xl border border-dashed px-2 py-1',
-          membersEmpty ? 'min-h-[28px] min-w-[24px] border-white/5' : 'min-h-[36px]',
-          isOver ? 'border-accent/60 bg-accent/10' : !membersEmpty ? 'border-white/10' : '',
-        ].join(' ')}
+    <div className={dense ? '' : 'pt-1'}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:underline"
       >
-        {props.kind === 'manager' ? (
-          props.person ? (
-            <PhotoChip person={props.person} slot={props.slot} />
+        <span>{open ? '▾' : '▸'}</span>
+        <span>{open ? 'Hide details' : 'See more'}</span>
+      </button>
+      {open && (
+        <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          {editing ? (
+            <textarea
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={() => {
+                setSubTeamDetails(subTeam.id, draft, slot);
+                setEditing(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  setDraft(subTeam.detailsText ?? '');
+                  setEditing(false);
+                }
+              }}
+              rows={6}
+              placeholder="Describe the team focus, scope, working style, key deliverables…"
+              className="block w-full resize-y bg-transparent text-xs text-ink placeholder:italic placeholder:text-muted outline-none"
+            />
+          ) : hasText ? (
+            <div
+              className={[
+                'whitespace-pre-wrap text-xs leading-relaxed text-ink/90',
+                admin ? 'cursor-text' : '',
+              ].join(' ')}
+              onDoubleClick={() => admin && setEditing(true)}
+              title={admin ? 'Double-click to edit' : undefined}
+            >
+              {subTeam.detailsText}
+            </div>
           ) : (
-            <span className="text-[10px] italic text-muted px-1">Drop lead</span>
-          )
-        ) : (
-          props.people.map((p) => <PhotoChip key={p.id} person={p} slot={props.slot} />)
-        )}
-      </div>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="text-xs italic text-muted hover:text-ink"
+            >
+              + add free-text details
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -435,11 +462,25 @@ function SharedGoal({
   );
 }
 
-function PhotoChip({ person, size = 'md', slot }: { person: Person; size?: 'md' | 'lg'; slot: SubTeamSlot }) {
+function PhotoChip({
+  person,
+  size = 'md',
+  slot,
+  subTeamId,
+  isLead = false,
+}: {
+  person: Person;
+  size?: 'md' | 'lg';
+  slot: SubTeamSlot;
+  subTeamId?: string;
+  isLead?: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: memberDragId(person.id, slot),
     data: { personId: person.id, kind: 'subteam-member', slot },
   });
+  const setSubTeamManager = useStore((s) => s.setSubTeamManager);
+  const admin = useAdminUnlocked();
   const photo = resolvePhotoUrl(person.photoUrl);
   const [imgFailed, setImgFailed] = useState(false);
   useEffect(() => setImgFailed(false), [person.photoUrl]);
@@ -447,16 +488,29 @@ function PhotoChip({ person, size = 'md', slot }: { person: Person; size?: 'md' 
   const dim = size === 'lg' ? 'h-10 w-10 text-xs' : 'h-8 w-8 text-[10px]';
   const textCls = size === 'lg' ? 'text-sm' : 'text-xs';
 
+  const leadBg = isLead
+    ? 'bg-amber-400/15 border-amber-300/50 ring-1 ring-amber-300/40'
+    : 'border-white/10 bg-white/[0.06]';
+
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }}
-      className="inline-flex cursor-grab items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] py-1 pl-1 pr-3 shadow-sm backdrop-blur hover:bg-white/10 active:cursor-grabbing"
+      className={[
+        'group/chip relative inline-flex cursor-grab items-center gap-2 rounded-full border py-1 pl-1 pr-3 shadow-sm backdrop-blur hover:bg-white/10 active:cursor-grabbing',
+        leadBg,
+      ].join(' ')}
       {...listeners}
       {...attributes}
-      title={person.name}
+      title={isLead ? `${person.name} — Lead` : person.name}
     >
-      <div className={`${dim} overflow-hidden rounded-full ring-1 ring-white/15`}>
+      <div
+        className={[
+          dim,
+          'overflow-hidden rounded-full',
+          isLead ? 'ring-2 ring-amber-300' : 'ring-1 ring-white/15',
+        ].join(' ')}
+      >
         {photo && !imgFailed ? (
           <img
             src={photo}
@@ -477,6 +531,33 @@ function PhotoChip({ person, size = 'md', slot }: { person: Person; size?: 'md' 
         )}
       </div>
       <span className={`${textCls} font-medium text-ink`}>{person.name}</span>
+      {isLead && (
+        <span
+          className="ml-0.5 rounded-full bg-amber-400/25 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-amber-100"
+          title="Pod lead"
+        >
+          ★ Lead
+        </span>
+      )}
+      {admin && subTeamId && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            setSubTeamManager(subTeamId, isLead ? null : person.id, slot);
+          }}
+          className={[
+            'absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold shadow transition-opacity',
+            isLead
+              ? 'border-amber-300/60 bg-amber-400 text-amber-900'
+              : 'border-white/20 bg-canvas text-muted opacity-0 group-hover/chip:opacity-100 hover:text-amber-300',
+          ].join(' ')}
+          title={isLead ? 'Demote — no lead' : 'Make Lead'}
+        >
+          ★
+        </button>
+      )}
     </div>
   );
 }
