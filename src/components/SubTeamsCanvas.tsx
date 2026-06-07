@@ -20,8 +20,6 @@ export function SubTeamsCanvas({
 }) {
   const people = useStore(selectVisiblePeople);
   const allPods = useStore((s) => (slot === 'second' ? s.subTeams2 : s.subTeams) ?? []);
-  const addSubTeam = useStore((s) => s.addSubTeam);
-  const admin = useAdminUnlocked();
 
   const crossCut = allPods.filter((p) => p.kind === 'crossCut');
   const normal = allPods.filter((p) => p.kind !== 'crossCut');
@@ -35,33 +33,13 @@ export function SubTeamsCanvas({
     <section className="mx-auto max-w-7xl px-4 py-10 sm:px-8 sm:py-12">
       <div className="mb-6 flex items-center gap-3">
         <h2 className="text-2xl font-bold text-ink">{title}</h2>
-        {admin && (
-          <>
-            <button
-              type="button"
-              onClick={() => addSubTeam('New pod', 'normal', slot)}
-              className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
-              title="Add a pod"
-            >
-              + Pod
-            </button>
-            <button
-              type="button"
-              onClick={() => addSubTeam('New cross pod', 'crossCut', slot)}
-              className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-muted hover:border-accent/60 hover:text-ink"
-              title="Add a cross pod"
-            >
-              + Cross
-            </button>
-          </>
-        )}
       </div>
 
       <UnassignedPool people={unassigned} slot={slot} />
 
       {normal.length === 0 && crossCut.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-12 text-center text-sm italic text-muted">
-          {admin ? 'No pods yet. Hit + Pod above to start.' : 'No pods yet.'}
+          No pods yet.
         </div>
       ) : normal.length > 0 ? (
         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -293,11 +271,13 @@ function SeeMoreButton({ subTeam, onClick }: { subTeam: SubTeam; onClick: () => 
   const admin = useAdminUnlocked();
   const ownerships = subTeam.ownerships ?? {};
   const ownershipCount = Object.values(ownerships).reduce((n, list) => n + list.length, 0);
-  const podCount = (subTeam.podResponsibilities ?? []).length;
-  const itemCount = ownershipCount + podCount;
-  const hasNotes = Boolean((subTeam.detailsText ?? '').trim());
-  // Hide for non-admins when there's nothing to see (no items + no notes).
-  if (!admin && itemCount === 0 && !hasNotes) return null;
+  const itemCount =
+    ownershipCount +
+    (subTeam.podResponsibilities ?? []).length +
+    (subTeam.bestFriends ?? []).length +
+    (subTeam.agenticFlows ?? []).length;
+  // Hide for non-admins when there's nothing to see.
+  if (!admin && itemCount === 0) return null;
   return (
     <button
       type="button"
@@ -331,7 +311,12 @@ function PodDetailModal({
   const addPodResponsibility = useStore((s) => s.addPodResponsibility);
   const updatePodResponsibility = useStore((s) => s.updatePodResponsibility);
   const removePodResponsibility = useStore((s) => s.removePodResponsibility);
-  const setSubTeamDetails = useStore((s) => s.setSubTeamDetails);
+  const addPodBestFriend = useStore((s) => s.addPodBestFriend);
+  const updatePodBestFriend = useStore((s) => s.updatePodBestFriend);
+  const removePodBestFriend = useStore((s) => s.removePodBestFriend);
+  const addPodAgenticFlow = useStore((s) => s.addPodAgenticFlow);
+  const updatePodAgenticFlow = useStore((s) => s.updatePodAgenticFlow);
+  const removePodAgenticFlow = useStore((s) => s.removePodAgenticFlow);
 
   // Close on Escape
   useEffect(() => {
@@ -378,14 +363,34 @@ function PodDetailModal({
         {/* Body — two columns, scrolls */}
         <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {/* Left: What the pod owns */}
-            <PodResponsibilitiesColumn
-              items={podResponsibilities}
-              admin={admin}
-              onAdd={(v) => addPodResponsibility(subTeam.id, v, slot)}
-              onUpdate={(idx, v) => updatePodResponsibility(subTeam.id, idx, v, slot)}
-              onRemove={(idx) => removePodResponsibility(subTeam.id, idx, slot)}
-            />
+            {/* Left: What the pod owns — three sub-sections */}
+            <section className="flex flex-col gap-5">
+              <BulletGroup
+                heading="Responsibilities"
+                items={podResponsibilities}
+                admin={admin}
+                onAdd={(v) => addPodResponsibility(subTeam.id, v, slot)}
+                onUpdate={(idx, v) => updatePodResponsibility(subTeam.id, idx, v, slot)}
+                onRemove={(idx) => removePodResponsibility(subTeam.id, idx, slot)}
+              />
+              <BulletGroup
+                heading="Best friends"
+                items={subTeam.bestFriends ?? []}
+                admin={admin}
+                onAdd={(v) => addPodBestFriend(subTeam.id, v, slot)}
+                onUpdate={(idx, v) => updatePodBestFriend(subTeam.id, idx, v, slot)}
+                onRemove={(idx) => removePodBestFriend(subTeam.id, idx, slot)}
+              />
+              <BulletGroup
+                heading="Agentic flows"
+                items={subTeam.agenticFlows ?? []}
+                admin={admin}
+                muted
+                onAdd={(v) => addPodAgenticFlow(subTeam.id, v, slot)}
+                onUpdate={(idx, v) => updatePodAgenticFlow(subTeam.id, idx, v, slot)}
+                onRemove={(idx) => removePodAgenticFlow(subTeam.id, idx, slot)}
+              />
+            </section>
 
             {/* Right: Who owns what */}
             <WhoOwnsWhatColumn
@@ -403,27 +408,26 @@ function PodDetailModal({
             />
           </div>
 
-          {/* Free-text notes (optional) */}
-          <NotesBlock
-            text={subTeam.detailsText ?? ''}
-            admin={admin}
-            onSave={(text) => setSubTeamDetails(subTeam.id, text, slot)}
-          />
         </div>
       </div>
     </div>
   );
 }
 
-function PodResponsibilitiesColumn({
+function BulletGroup({
+  heading,
   items,
   admin,
+  muted = false,
   onAdd,
   onUpdate,
   onRemove,
 }: {
+  heading: string;
   items: string[];
   admin: boolean;
+  /** When true, render the whole block in a smaller/quieter style (used for Agentic flows). */
+  muted?: boolean;
   onAdd: (v: string) => void;
   onUpdate: (index: number, v: string) => void;
   onRemove: (index: number) => void;
@@ -437,14 +441,22 @@ function PodResponsibilitiesColumn({
     setAdding(false);
   };
 
+  // Hide an empty group for non-admin viewers (don't show empty "Agentic flows" headings).
+  if (!admin && items.length === 0) return null;
+
   return (
-    <section className="flex flex-col gap-3">
-      <h4 className="text-[11px] font-bold uppercase tracking-wide text-muted">
-        What the pod owns
+    <div className={['flex flex-col', muted ? 'gap-1.5 opacity-90' : 'gap-3'].join(' ')}>
+      <h4
+        className={[
+          'font-bold uppercase tracking-wide',
+          muted ? 'text-[10px] text-muted/80' : 'text-[11px] text-muted',
+        ].join(' ')}
+      >
+        {heading}
       </h4>
       {items.length === 0 && !adding ? (
-        <p className="text-sm italic text-muted">
-          {admin ? 'Add what the team owns as a whole.' : 'Nothing here yet.'}
+        <p className={['italic text-muted', muted ? 'text-xs' : 'text-sm'].join(' ')}>
+          {admin ? 'Add an item.' : 'Nothing here yet.'}
         </p>
       ) : (
         <ul className="flex flex-col gap-1.5">
@@ -453,6 +465,7 @@ function PodResponsibilitiesColumn({
               key={idx}
               text={it}
               admin={admin}
+              size={muted ? 'sm' : 'md'}
               onUpdate={(v) => onUpdate(idx, v)}
               onRemove={() => onRemove(idx)}
             />
@@ -474,21 +487,24 @@ function PodResponsibilitiesColumn({
                   setAdding(false);
                 }
               }}
-              placeholder="what the pod owns…"
-              className="w-full rounded-md border border-accent/40 bg-white/[0.04] px-2 py-1 text-sm text-ink outline-none"
+              placeholder="add an item…"
+              className={[
+                'w-full rounded-md border border-accent/40 bg-white/[0.04] px-2 py-1 text-ink outline-none',
+                muted ? 'text-xs' : 'text-sm',
+              ].join(' ')}
             />
           ) : (
             <button
               type="button"
               onClick={() => setAdding(true)}
-              className="text-xs text-muted hover:text-ink"
+              className={['text-muted hover:text-ink', muted ? 'text-[11px]' : 'text-xs'].join(' ')}
             >
               + add item
             </button>
           )}
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -650,11 +666,13 @@ function OwnershipRow({
 function OwnershipBullet({
   text,
   admin,
+  size = 'md',
   onUpdate,
   onRemove,
 }: {
   text: string;
   admin: boolean;
+  size?: 'md' | 'sm';
   onUpdate: (v: string) => void;
   onRemove: () => void;
 }) {
@@ -663,7 +681,12 @@ function OwnershipBullet({
   useEffect(() => setDraft(text), [text]);
 
   return (
-    <li className="group flex items-start gap-2 text-sm text-ink/90">
+    <li
+      className={[
+        'group flex items-start gap-2',
+        size === 'sm' ? 'text-xs text-ink/80' : 'text-sm text-ink/90',
+      ].join(' ')}
+    >
       <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
       {editing ? (
         <input
@@ -703,63 +726,6 @@ function OwnershipBullet({
         </button>
       )}
     </li>
-  );
-}
-
-function NotesBlock({
-  text,
-  admin,
-  onSave,
-}: {
-  text: string;
-  admin: boolean;
-  onSave: (v: string) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(text);
-  useEffect(() => setDraft(text), [text]);
-  const hasText = Boolean(text.trim());
-  if (!admin && !hasText) return null;
-  return (
-    <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-4">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">Notes</p>
-      {editing ? (
-        <textarea
-          autoFocus
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={() => {
-            onSave(draft);
-            setEditing(false);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setDraft(text);
-              setEditing(false);
-            }
-          }}
-          rows={4}
-          placeholder="Free-text notes — scope, working style, key deliverables…"
-          className="block w-full resize-y bg-transparent text-sm text-ink placeholder:italic placeholder:text-muted outline-none"
-        />
-      ) : hasText ? (
-        <div
-          className={['whitespace-pre-wrap text-sm leading-relaxed text-ink/90', admin ? 'cursor-text' : ''].join(' ')}
-          onDoubleClick={() => admin && setEditing(true)}
-          title={admin ? 'Double-click to edit' : undefined}
-        >
-          {text}
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="text-xs italic text-muted hover:text-ink"
-        >
-          + add notes
-        </button>
-      )}
-    </div>
   );
 }
 

@@ -76,6 +76,10 @@ export type SubTeam = {
   ownerships?: Record<string, string[]>;
   /** Flat list of pod-level responsibilities — what the team as a whole owns. */
   podResponsibilities?: string[];
+  /** Cross-functional partners / "best friends" of this pod. */
+  bestFriends?: string[];
+  /** Agentic flows the pod runs / contributes to. Visually de-emphasised. */
+  agenticFlows?: string[];
 };
 
 export type Topic = {

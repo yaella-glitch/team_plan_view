@@ -71,6 +71,24 @@ type Actions = {
     slot?: SubTeamSlot,
   ) => void;
   removePodResponsibility: (subTeamId: string, index: number, slot?: SubTeamSlot) => void;
+  // Pod best-friends (cross-functional partners)
+  addPodBestFriend: (subTeamId: string, item: string, slot?: SubTeamSlot) => void;
+  updatePodBestFriend: (
+    subTeamId: string,
+    index: number,
+    item: string,
+    slot?: SubTeamSlot,
+  ) => void;
+  removePodBestFriend: (subTeamId: string, index: number, slot?: SubTeamSlot) => void;
+  // Pod agentic flows
+  addPodAgenticFlow: (subTeamId: string, item: string, slot?: SubTeamSlot) => void;
+  updatePodAgenticFlow: (
+    subTeamId: string,
+    index: number,
+    item: string,
+    slot?: SubTeamSlot,
+  ) => void;
+  removePodAgenticFlow: (subTeamId: string, index: number, slot?: SubTeamSlot) => void;
   addSubTeamTag: (id: string, tag: string, slot?: SubTeamSlot) => void;
   removeSubTeamTag: (id: string, tagIndex: number, slot?: SubTeamSlot) => void;
 
@@ -495,6 +513,78 @@ export const useStore = create<Store>()(
             if (index < 0 || index >= list.length) return s;
             list.splice(index, 1);
             return { ...s, podResponsibilities: list };
+          }),
+        }));
+      },
+      addPodBestFriend: (subTeamId, item, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        const v = item.trim();
+        if (!v) return;
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) =>
+            s.id === subTeamId ? { ...s, bestFriends: [...(s.bestFriends ?? []), v] } : s,
+          ),
+        }));
+      },
+      updatePodBestFriend: (subTeamId, index, item, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        const v = item.trim();
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const list = [...(s.bestFriends ?? [])];
+            if (index < 0 || index >= list.length) return s;
+            if (!v) list.splice(index, 1);
+            else list[index] = v;
+            return { ...s, bestFriends: list };
+          }),
+        }));
+      },
+      removePodBestFriend: (subTeamId, index, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const list = [...(s.bestFriends ?? [])];
+            if (index < 0 || index >= list.length) return s;
+            list.splice(index, 1);
+            return { ...s, bestFriends: list };
+          }),
+        }));
+      },
+      addPodAgenticFlow: (subTeamId, item, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        const v = item.trim();
+        if (!v) return;
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) =>
+            s.id === subTeamId ? { ...s, agenticFlows: [...(s.agenticFlows ?? []), v] } : s,
+          ),
+        }));
+      },
+      updatePodAgenticFlow: (subTeamId, index, item, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        const v = item.trim();
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const list = [...(s.agenticFlows ?? [])];
+            if (index < 0 || index >= list.length) return s;
+            if (!v) list.splice(index, 1);
+            else list[index] = v;
+            return { ...s, agenticFlows: list };
+          }),
+        }));
+      },
+      removePodAgenticFlow: (subTeamId, index, slot: SubTeamSlot = 'main') => {
+        const key = slotKey(slot);
+        set((state) => ({
+          [key]: (state[key] ?? []).map((s) => {
+            if (s.id !== subTeamId) return s;
+            const list = [...(s.agenticFlows ?? [])];
+            if (index < 0 || index >= list.length) return s;
+            list.splice(index, 1);
+            return { ...s, agenticFlows: list };
           }),
         }));
       },
