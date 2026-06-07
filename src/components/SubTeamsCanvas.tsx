@@ -488,29 +488,16 @@ function PhotoChip({
   const dim = size === 'lg' ? 'h-10 w-10 text-xs' : 'h-8 w-8 text-[10px]';
   const textCls = size === 'lg' ? 'text-sm' : 'text-xs';
 
-  const leadBg = isLead
-    ? 'bg-amber-400/15 border-amber-300/50 ring-1 ring-amber-300/40'
-    : 'border-white/10 bg-white/[0.06]';
-
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), opacity: isDragging ? 0.4 : 1 }}
-      className={[
-        'group/chip relative inline-flex cursor-grab items-center gap-2 rounded-full border py-1 pl-1 pr-3 shadow-sm backdrop-blur hover:bg-white/10 active:cursor-grabbing',
-        leadBg,
-      ].join(' ')}
+      className="group/chip relative inline-flex cursor-grab items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] py-1 pl-1 pr-3 shadow-sm backdrop-blur hover:bg-white/10 active:cursor-grabbing"
       {...listeners}
       {...attributes}
       title={isLead ? `${person.name} — Lead` : person.name}
     >
-      <div
-        className={[
-          dim,
-          'overflow-hidden rounded-full',
-          isLead ? 'ring-2 ring-amber-300' : 'ring-1 ring-white/15',
-        ].join(' ')}
-      >
+      <div className={`${dim} overflow-hidden rounded-full ring-1 ring-white/15`}>
         {photo && !imgFailed ? (
           <img
             src={photo}
@@ -533,10 +520,10 @@ function PhotoChip({
       <span className={`${textCls} font-medium text-ink`}>{person.name}</span>
       {isLead && (
         <span
-          className="ml-0.5 rounded-full bg-amber-400/25 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-amber-100"
+          className="ml-0.5 rounded-full bg-white/10 px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-ink"
           title="Pod lead"
         >
-          ★ Lead
+          Lead
         </span>
       )}
       {admin && subTeamId && (
@@ -547,15 +534,10 @@ function PhotoChip({
             e.stopPropagation();
             setSubTeamManager(subTeamId, isLead ? null : person.id, slot);
           }}
-          className={[
-            'absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold shadow transition-opacity',
-            isLead
-              ? 'border-amber-300/60 bg-amber-400 text-amber-900'
-              : 'border-white/20 bg-canvas text-muted opacity-0 group-hover/chip:opacity-100 hover:text-amber-300',
-          ].join(' ')}
+          className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-canvas text-[10px] font-bold text-muted opacity-0 shadow transition-opacity hover:text-ink group-hover/chip:opacity-100"
           title={isLead ? 'Demote — no lead' : 'Make Lead'}
         >
-          ★
+          {isLead ? '×' : '★'}
         </button>
       )}
     </div>
